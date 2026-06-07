@@ -39,7 +39,7 @@ Read Geo model output and visualise the posterior distribution of ancestral loca
 
 If you use GeoModelR, please cite the paper that introduced the Geo model with palaeomap restrictions:
 
-> Avaria-Llautureo, J., Püschel, H.P., et al. (2025). *The radiation and geographic expansion of primates through diverse climates*. **PNAS**, 122(18). <https://doi.org/10.1073/pnas.2423833122>
+> Avaria-Llautureo, J., et al. (2025). *The radiation and geographic expansion of primates through diverse climates*. **PNAS**, 122(18). <https://doi.org/10.1073/pnas.2423833122>
 
 ---
 
