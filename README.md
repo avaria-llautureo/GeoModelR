@@ -129,7 +129,8 @@ plot_node(geo, "Node-00000")
 # With tree panel and regional zoom
 plot_node(geo, "Node-00000",
                  phy  = phy,
-                 bbox = c(-30, 60, -20, 60))
+                 bbox = c(-130, -30, 20, 85),
+                 pt_size = 4)
 
 # All nodes in a time window
 plot_timeinterval(geo, age_min = 0, age_max = 10)
