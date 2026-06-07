@@ -133,7 +133,7 @@ plot_node(geo, "Node-00000",
                  pt_size = 4)
 
 # All nodes in a time window
-plot_timeinterval(geo, age_min = 0, age_max = 10)
+plot_timeinterval(geo, age_min = 8, age_max = 10)
 
 # All nodes in a clade
 plot_clade(geo, tips = find_tips(geo, "Homo")) # Homo clade
