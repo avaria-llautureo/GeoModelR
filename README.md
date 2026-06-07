@@ -94,6 +94,16 @@ maps <- get_paleomaps(max_age = ceiling(max(node.depth.edgelength(phy))))
 # Fix any failed downloads
 maps <- fill_missing_maps(maps)
 
+# Inspect csv maps before committing to the full resolution and writing
+df <- sf_to_csv(age = 100, maps = maps, resolution = 2)
+
+# Plot test csv map
+ggplot(df, aes(x = Lon, y = Lat, fill = factor(mask))) +
+  geom_raster() +
+  scale_fill_manual(values = c("0" = "lightblue", "1" = "tan"),
+                    labels = c("Ocean", "Land"), name = NULL) +
+  coord_fixed(expand = FALSE) + theme_bw()
+
 # Write binary land/ocean CSV files
 sf_to_csv(age = maps$ages, maps = maps, resolution = 1, dir = "maps_csv")
 
