@@ -132,10 +132,10 @@ plot_node(geo, "Node-00000",
                  bbox = c(-130, -30, 20, 85),
                  pt_size = 4)
 
-# All nodes in a time window
+# All nodes in a time window, using median coordinates per node
 plot_timeinterval(geo, age_min = 8, age_max = 10)
 
-# All nodes in a clade
+# All nodes in a clade, using median coordinates per node
 plot_clade(geo, tips = find_tips(geo, "Homo")) # Homo clade
 ```
 
