@@ -1,0 +1,38 @@
+Package: GeoModelR
+Title: Tools for the BayesTraits Geo Model — Palaeomap Preparation and Output Exploration
+Version: 0.1.0
+Authors@R: 
+    person("Jorge", "Avaria-Llautureo",
+           email = "j.l.avaria@reading.ac.uk",
+           role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-8610-7428"))
+Description: GeoModelR provides tools for working with the Geographical (Geo)
+    model implemented in BayesTraits v5+. The package covers two workflows:
+    (1) Palaeomap preparation — downloading palaeocoastlines from the GPlates
+    Web Service and exporting them as binary land/ocean CSV files and BuildMaps
+    input files for BayesTraits; and (2) Output exploration — reading Geo model
+    AncStates output files and visualising the posterior distribution of
+    ancestral geographic coordinates on age-matched palaeomaps, including
+    per-node, time-window, and clade-level plots.
+    The package is linked to Avaria-Llautureo et al. (2025)
+    <https://doi.org/10.1073/pnas.2423833122>.
+License: GPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Depends:
+    R (>= 4.5.0)
+Imports:
+    ape,
+    rgplates,
+    httr2,
+    sf,
+    terra,
+    ggplot2
+Suggests:
+    ggtree,
+    deeptime,
+    patchwork,
+    ggdensity
+URL: https://github.com/avaria-llautureo/GeoModelR
+BugReports: https://github.com/avaria-llautureo/GeoModelR/issues
