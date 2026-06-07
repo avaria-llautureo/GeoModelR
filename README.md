@@ -99,7 +99,7 @@ sf_to_csv(age = maps$ages, maps = maps, resolution = 1, dir = "maps_csv")
 
 # Write the BayesTraits BuildMaps input file
 write_buildmaps_file(maps)
-# Then follows the BayesTraits manual build the map-file formate required to run the Geo model
+# Then, follow the BayesTraits manual instructions to build the input map-file format for analysis
 ```
 
 ### Section 2 — Explore Geo model output
@@ -114,10 +114,10 @@ geo <- read_geo_ancstates("your_analysis.AncStates.txt", phy = phy)
 print(geo)
 
 # Plot root node posterior on its age-matched palaeomap
-plot_node(geo, "Node-00008") # Primate crown node
+plot_node(geo, "Node-00000") 
 
 # With tree panel and regional zoom
-plot_node(geo, "Node-00008",
+plot_node(geo, "Node-00000",
                  phy  = phy,
                  bbox = c(-30, 60, -20, 60))
 
@@ -133,7 +133,7 @@ plot_clade(geo, tips = find_tips(geo, "Homo")) # Homo clade
 ## Example dataset
 
 The `data-raw/` folder contains a minimal example from the primate analysis in Avaria-Llautureo et al. (2025):
-- `Geo_Primates_AncStates_example.txt` — truncated AncStates output (50 iterations)
+- `Primate.AncStates.txt` — truncated AncStates output (50 iterations)
 - `Median.trees` — one of the hundreds of primate phylogenetic trees analysed in the study
 
 ---
