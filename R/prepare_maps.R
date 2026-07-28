@@ -31,7 +31,8 @@
 #'                or \code{max_age}.
 #' @param max_age Numeric. Maximum age in Ma. Overrides \code{geo}.
 #' @param model   Character. rgplates plate model (default \code{"PALEOMAP"}).
-#'                Must match the model used in the BayesTraits analysis.
+#'                For alternative paleogeographic models look at the
+#'                rgplates::reconstruction() function.
 #' @param ages    Integer vector or NULL. Explicit ages to download.
 #'                NULL (default) downloads every integer from 0 to max_age.
 #' @return A \code{geo_paleomaps} object. Pass to plotting functions via

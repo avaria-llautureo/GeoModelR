@@ -14,7 +14,8 @@ or \code{max_age}.}
 \item{max_age}{Numeric. Maximum age in Ma. Overrides \code{geo}.}
 
 \item{model}{Character. rgplates plate model (default \code{"PALEOMAP"}).
-Must match the model used in the BayesTraits analysis.}
+For alternative paleogeographic models look at the
+rgplates::reconstruction() function.}
 
 \item{ages}{Integer vector or NULL. Explicit ages to download.
 NULL (default) downloads every integer from 0 to max_age.}

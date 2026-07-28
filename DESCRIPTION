@@ -19,7 +19,6 @@ Description: GeoModelR provides tools for working with the Geographical (Geo)
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
 Depends:
     R (>= 4.5.0)
 Imports:
@@ -36,3 +35,4 @@ Suggests:
     ggdensity
 URL: https://github.com/avaria-llautureo/GeoModelR
 BugReports: https://github.com/avaria-llautureo/GeoModelR/issues
+Config/roxygen2/version: 8.0.0
