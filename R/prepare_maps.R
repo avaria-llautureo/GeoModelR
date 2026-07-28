@@ -126,6 +126,7 @@ get_paleomaps <- function(geo     = NULL,
 }
 
 #' Print method for geo_paleomaps
+#' @export
 print.geo_paleomaps <- function(x, ...) {
   cat("Palaeomap collection (geo_paleomaps)\n")
   cat("  Model  :", x$model, "\n")

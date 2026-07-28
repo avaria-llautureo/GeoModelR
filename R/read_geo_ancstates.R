@@ -1,20 +1,57 @@
-# =============================================================================
-# read_geo_ancstates()
-# Parser for BayesTraits v5+ Geo model output files (*.AncStates.txt)
-#
-# Returns a geo_ancstates object with:
-#   $nodes  — data.frame of node metadata (one row per node)
-#   $mcmc   — data.frame of MCMC posterior samples (wide format)
-#   $coords — tidy long-format table (one row per node × iteration)
-#
-# If a phylo object is supplied via the phy argument, an ape_node column is
-# added to $nodes and $coords mapping each BayesTraits node name to its
-# corresponding R node number in the ape tree. This can also be done after
-# parsing with add_ape_nodes(geo, phy). The ape tree object must be the tree used for analyses.
-#
-# Author:  Jorge Avaria-Llautureo
-# Depends: base R only (ape required only when phy is supplied)
-# =============================================================================
+#' Read a BayesTraits Geo model AncStates output file
+#'
+#' Parses the \code{*.AncStates.txt} output file produced by BayesTraits v5+
+#' when running the Geo model, and returns a structured \code{geo_ancstates}
+#' object containing node metadata, MCMC posterior samples, and a tidy
+#' long-format table of ancestral coordinates.
+#'
+#' The output file contains two blocks: a node metadata block (starting with
+#' the line \code{"Node Name"}) and an MCMC samples block (starting with the
+#' line \code{"Itter"}). Both blocks are parsed and combined into a single
+#' object with three components: \code{$nodes}, \code{$mcmc}, and
+#' \code{$coords}.
+#'
+#' If a \code{phylo} object is supplied via \code{phy}, an \code{ape_node}
+#' column is added to \code{$nodes} and \code{$coords}, mapping each
+#' BayesTraits node name to its corresponding node number in the \pkg{ape}
+#' tree. This step can also be run afterwards with \code{add_ape_nodes()}.
+#' The supplied tree must be the same tree used in the BayesTraits analysis.
+#'
+#' @param file    Character. Path to the BayesTraits \code{*.AncStates.txt}
+#'                output file.
+#' @param phy     Optional \code{phylo} object (\pkg{ape}). If supplied, ape
+#'                node numbers are matched and added automatically. Must be
+#'                the same tree used in the Geo model analysis. Default
+#'                \code{NULL}.
+#' @param verbose Logical. Print a summary of the parsed blocks on
+#'                completion (default \code{TRUE}).
+#'
+#' @return A \code{geo_ancstates} object (a list with S3 class
+#'   \code{"geo_ancstates"}) containing:
+#'   \itemize{
+#'     \item \code{nodes} — data.frame of node metadata, one row per node
+#'           (\code{node_name}, \code{branch_length}, \code{height},
+#'           \code{restriction_map}, \code{n_taxa}, \code{taxa}, and
+#'           \code{ape_node} if \code{phy} is supplied).
+#'     \item \code{mcmc} — data.frame of MCMC posterior samples in wide
+#'           format, one row per iteration.
+#'     \item \code{coords} — tidy long-format data.frame with one row per
+#'           node x iteration, including \code{longitude}, \code{latitude},
+#'           and \code{branch_length_scaled}.
+#'     \item \code{file} — normalized path to the input file.
+#'     \item \code{n_nodes} — total number of nodes.
+#'     \item \code{n_iterations} — total number of MCMC iterations.
+#'   }
+#'
+#' @examples
+#' geo <- read_geo_ancstates("Primate.AncStates.txt")
+#'
+#' # With ape node matching at parse time
+#' phy <- ape::read.nexus("Median.trees")
+#' geo <- read_geo_ancstates("Primate.AncStates.txt", phy = phy)
+#'
+#' print(geo)
+#' summary(geo)
 
 read_geo_ancstates <- function(file, phy = NULL, verbose = TRUE) {
 
@@ -357,7 +394,7 @@ add_ape_nodes <- function(geo, phy, verbose = TRUE) {
 # =============================================================================
 # S3 methods
 # =============================================================================
-
+#' @export
 print.geo_ancstates <- function(x, ...) {
   cat("BayesTraits Geo Model — AncStates\n")
   cat("  File      :", x$file, "\n")
@@ -375,6 +412,7 @@ print.geo_ancstates <- function(x, ...) {
   invisible(x)
 }
 
+#' @export
 summary.geo_ancstates <- function(object, ...) {
   cat("=== geo_ancstates summary ===\n\n")
 
