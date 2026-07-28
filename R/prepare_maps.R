@@ -456,8 +456,8 @@ write_buildmaps_file <- function(maps,
   end_ages   <- c(midpoints, available[n] + 0.5)
 
   # Build lines
-  header <- sprintf("%s %d %d", bin_file, as.integer(lon_boxes), as.integer(lat_boxes))
-  map_lines <- sprintf("%s%d.csv %.1f %.1f",
+  header <- sprintf("%s\t%d\t%d", bin_file, as.integer(lon_boxes), as.integer(lat_boxes))
+  map_lines <- sprintf("%s%d.csv\t%.1f\t%.1f",
                        prefix, available, start_ages, end_ages)
 
   out <- c(header, map_lines)
