@@ -1,13 +1,13 @@
 Package: GeoModelR
-Title: Tools for the BayesTraits Geo Model — Palaeomap Preparation and Output Exploration
-Version: 0.1.0
+Title: Tools for Phylogenetic Geographic Modelling and Biogeographic Analysis
+Version: 0.2.0
 Authors@R: 
     person("Jorge", "Avaria-Llautureo",
            email = "j.l.avaria@reading.ac.uk",
            role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-8610-7428"))
 Description: GeoModelR provides tools for working with the Geographical (Geo)
-    model implemented in BayesTraits v5+. The package covers two workflows:
+    model implemented in BayesTraits v5+. This package version covers two workflows:
     (1) Palaeomap preparation — downloading palaeocoastlines from the GPlates
     Web Service and exporting them as binary land/ocean CSV files and BuildMaps
     input files for BayesTraits; and (2) Output exploration — reading Geo model
@@ -35,4 +35,4 @@ Suggests:
     ggdensity
 URL: https://github.com/avaria-llautureo/GeoModelR
 BugReports: https://github.com/avaria-llautureo/GeoModelR/issues
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.0

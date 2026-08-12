@@ -38,6 +38,7 @@
 #' plot_node(geo, "Node-00008")
 #' plot_node(geo, "Node-00008", bbox = c(-82, -33, -56, -15))
 #' plot_node(geo, "Node-00008", phy = phy, maps = maps)
+#' @export
 plot_node <- function(geo,
                               node,
                               burnin       = 0.1,
@@ -177,6 +178,7 @@ plot_node <- function(geo,
 #' geo <- read_geo_ancstates("VR.AncStates.txt")
 #' plot_timeinterval(geo, age_min = 0, age_max = 8)
 #' plot_timeinterval(geo, age_min = 0, age_max = 8, modern_coords = FALSE, maps = maps)
+#' @export
 plot_timeinterval <- function(geo,
                                  age_min       = 0,
                                  age_max       = Inf,
@@ -312,6 +314,7 @@ plot_timeinterval <- function(geo,
 #' plot_clade(geo, tips = c("A_ligtu_ligtu_PCM32", "A_ligtu_simsii_OTN173"))
 #' plot_clade(geo, tips = c("A_ligtu_ligtu_PCM32", "A_ligtu_simsii_OTN173"),
 #'                   modern_coords = FALSE, maps = maps)
+#' @export
 plot_clade <- function(geo,
                                tips,
                                burnin        = 0.1,

@@ -268,12 +268,14 @@
 
 #' List all unique node ages (rounded to integer Ma)
 #' @param geo A geo_ancstates object.
+#' @export
 get_node_ages <- function(geo) sort(unique(round(geo$nodes$height)))
 
 #' Find tip taxon names matching a pattern
 #' @param geo     A geo_ancstates object.
 #' @param pattern Character. Regex or fixed string.
 #' @param fixed   Logical. Fixed string match? (default FALSE).
+#' @export
 find_tips <- function(geo, pattern, fixed = FALSE) {
   tip_taxa <- unlist(lapply(seq_len(nrow(geo$nodes)), function(i) {
     if (geo$nodes$n_taxa[i] == 1) geo$nodes$taxa[[i]] else NULL
@@ -282,10 +284,12 @@ find_tips <- function(geo, pattern, fixed = FALSE) {
 }
 
 #' Clear the in-session palaeomap cache
+#' @export
 clear_map_cache <- function() {
   rm(list = ls(envir = .map_cache), envir = .map_cache)
   message("Palaeomap cache cleared.")
 }
 
 #' List palaeomaps currently held in the session cache
+#' @export
 list_cached_maps <- function() ls(.map_cache)

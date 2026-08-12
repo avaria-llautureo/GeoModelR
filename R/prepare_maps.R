@@ -50,6 +50,7 @@
 #'
 #' # Use in plotting
 #' plot_node_palaeo(geo, "Node-00000", maps = maps)
+#' @export
 get_paleomaps <- function(geo     = NULL,
                            max_age = NULL,
                            model   = "PALEOMAP",
@@ -174,6 +175,7 @@ print.geo_paleomaps <- function(x, ...) {
 #' # Batch: write all ages from a maps object
 #' maps <- get_paleomaps(max_age = 74)
 #' sf_to_csv(age = maps$ages, maps = maps, resolution = 1, dir = "maps_csv")
+#' @export
 sf_to_csv <- function(age        = 0,
                        maps       = NULL,
                        model      = "PALEOMAP",
@@ -311,6 +313,7 @@ sf_to_csv <- function(age        = 0,
 #' maps <- get_paleomaps(geo)
 #' export_restriction_maps(maps)
 #' export_restriction_maps(maps, ages = get_node_ages(geo))
+#' @export
 export_restriction_maps <- function(maps,
                                      dir     = "restriction_maps",
                                      ages    = NULL,
@@ -410,6 +413,7 @@ export_restriction_maps <- function(maps,
 #' # Then in BayesTraits (command line):
 #' # BuildMaps BuildPrimatesMaps.txt
 #' # LoadMaps  PrimatesMaps.bin
+#' @export
 write_buildmaps_file <- function(maps,
                                   bin_file  = "BinaryMap.bin",
                                   prefix    = "mask_",
@@ -486,6 +490,7 @@ To build the binary map file, run in BayesTraits:"))
 
 
 
+#' @export
 fill_missing_maps <- function(maps, ages = NULL, verbose = TRUE) {
 
   if (!inherits(maps, "geo_paleomaps"))

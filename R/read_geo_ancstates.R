@@ -53,6 +53,7 @@
 #' print(geo)
 #' summary(geo)
 
+#' @export
 read_geo_ancstates <- function(file, phy = NULL, verbose = TRUE) {
 
   # ---------------------------------------------------------------------------
@@ -180,6 +181,7 @@ read_geo_ancstates <- function(file, phy = NULL, verbose = TRUE) {
 #'
 #' # Filter coords by ape node number
 #' geo$coords[geo$coords$ape_node == 903, ]
+#' @export
 add_ape_nodes <- function(geo, phy, verbose = TRUE) {
 
   if (!inherits(geo, "geo_ancstates"))
