@@ -30,27 +30,42 @@ Matching strategy:
 \itemize{
 \item Tip nodes: matched directly by \code{phy$tip.label}.
 Tip numbers in ape are \code{1:Ntip(phy)}.
-\item Internal nodes: matched via \code{ape::getMRCA()} on the full
-set of taxa in each node's taxa list. The ape node number for
-internal nodes is \code{Ntip(phy) + 1 : Ntip(phy) + Nnode(phy)}.
+\item Internal nodes: matched by their exact set of descendant taxa.
+Each BayesTraits node is assigned the ape node whose clade
+contains exactly the same tips (no more, no fewer). Internal
+ape node numbers run from \code{Ntip(phy) + 1} to
+\code{Ntip(phy) + Nnode(phy)}.
 }
+
+Because the match is exact, a tree that differs from the one used in
+BayesTraits (different tips or a different topology) is detected and
+the function stops with a list of the nodes that do not match, instead
+of silently returning the most recent common ancestor of a mismatched
+clade.
+
+The function can be run more than once on the same object (for example
+after re-reading the tree): any existing \code{ape_node} column is
+replaced.
 }
 \examples{
-geo <- read_geo_ancstates("Primate.AncStates.txt")
-phy <- ape::read.nexus("Median.trees")
+anc_file  <- system.file("extdata", "Primate.AncStates.txt",
+                         package = "GeoModelR")
+tree_file <- system.file("extdata", "Median.trees", package = "GeoModelR")
+phy <- ape::read.nexus(tree_file)
 
-# Option 1 — at parse time
-geo <- read_geo_ancstates("Primate.AncStates.txt", phy = phy)
+# Option 1 - at parse time
+geo <- read_geo_ancstates(anc_file, phy = phy)
 
-# Option 2 — after parsing
+# Option 2 - after parsing
+geo <- read_geo_ancstates(anc_file)
 geo <- add_ape_nodes(geo, phy)
 
 # Access by BayesTraits name
-geo$nodes[geo$nodes$node_name == "Node-00008", "ape_node"] # Primate crown node
+geo$nodes[geo$nodes$node_name == "Node-00008", "ape_node"]
 
 # Access by ape node number
 geo$nodes[geo$nodes$ape_node == 903, "node_name"]
 
 # Filter coords by ape node number
-geo$coords[geo$coords$ape_node == 903, ]
+head(geo$coords[geo$coords$ape_node == 903, ])
 }

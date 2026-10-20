@@ -8,7 +8,10 @@ get_dispersal_distance(
   geo,
   phy,
   type = c("branch", "path", "both"),
-  nodes = c("tips", "all")
+  nodes = NULL,
+  frame = c("palaeo", "plate"),
+  model = "PALEOMAP",
+  verbose = TRUE
 )
 }
 \arguments{
@@ -22,19 +25,60 @@ generate \code{geo} (i.e. \code{geo$coords$ape_node} must index this tree).}
 \item{type}{Character. \code{"branch"} (default), \code{"path"}, or
 \code{"both"}. See Details.}
 
-\item{nodes}{Character. Only used when \code{type} is \code{"path"} or
-\code{"both"}. \code{"tips"} (default) returns cumulative distance for
-tips only; \code{"all"} also returns cumulative distance at every
-internal node (root is always 0).}
+\item{nodes}{Character, \code{"tips"} or \code{"all"}. Optional; if left
+as \code{NULL} (the default), the sensible default for \code{type} is
+used automatically (see Details).}
+
+\item{frame}{Character. \code{"palaeo"} (default) or \code{"plate"}. See
+the Reference frame section.}
+
+\item{model}{Character. Plate model used when \code{frame = "plate"}
+(default \code{"PALEOMAP"}); use the model your palaeomaps were built
+with.}
+
+\item{verbose}{Logical. Report progress of the plate reconstruction
+(default \code{TRUE}).}
 }
 \value{
 If \code{type = "branch"}, a long-format \code{data.frame} with one row
-per branch x iteration: \code{from_node}, \code{to_node},
-\code{iteration}, \code{distance_km}.
+per branch x iteration:
+\itemize{
+\item \code{from_node}, \code{to_node} - BayesTraits node names.
+\item \code{tip_label} - species name if \code{to_node} is a tip,
+else \code{NA}.
+\item \code{parent_ape_node}, \code{child_ape_node} - \pkg{ape} node
+numbers, for joining back onto \code{geo$coords} or \code{phy}.
+\item \code{iteration} - MCMC iteration.
+\item \code{from_lon}, \code{from_lat}, \code{to_lon}, \code{to_lat}
+- parent/child coordinates for this iteration, in the chosen
+frame (present-day positions when \code{frame = "plate"}).
+\item \code{parent_height}, \code{child_height} - node ages (fixed,
+same units as the input tree).
+\item \code{branch_time_myr} - fixed chronological branch length
+(from \code{phy$edge.length}; constant across iterations).
+\item \code{branch_length_scaled} - variable-rates-scaled branch
+length for this edge (from \code{geo$coords}; varies by
+iteration). Dividing \code{distance_km} by either time column
+gives a fixed-time or VR-scaled dispersal rate respectively.
+\item \code{distance_km} - great-circle distance in kilometres.
+}
 
 If \code{type = "path"}, a long-format \code{data.frame} with one row
-per node x iteration: \code{node_name}, \code{ape_node},
-\code{iteration}, \code{path_distance_km}, \code{is_tip}.
+per node x iteration:
+\itemize{
+\item \code{node_name}, \code{ape_node}, \code{tip_label} - as above.
+\item \code{iteration} - MCMC iteration.
+\item \code{longitude}, \code{latitude} - this node's own coordinates
+for this iteration, in the chosen frame.
+\item \code{height} - this node's age (fixed).
+\item \code{lineage_time_myr} - total chronological time elapsed
+from the root to this node (\code{root height - node height};
+fixed). Dividing \code{path_distance_km} by this gives a
+whole-lineage dispersal rate.
+\item \code{path_distance_km} - cumulative great-circle distance
+(km) from the root to this node.
+\item \code{is_tip} - logical, \code{TRUE} for tip nodes.
+}
 
 If \code{type = "both"}, a list with elements \code{$branch} and
 \code{$path}, each as described above.
@@ -46,32 +90,92 @@ iteration. Two distance types are available, selected via \code{type}:
 }
 \details{
 \itemize{
-\item \code{"branch"} — the distance between parent and child node
+\item \code{"branch"} - the distance between parent and child node
 coordinates for every branch in the tree (one row per branch x
-iteration).
-\item \code{"path"} — the cumulative distance from the root to each
+iteration), together with the coordinates, node ages, and both
+a fixed-time and a variable-rates (VR) scaled branch time, so
+dispersal rates can be computed directly from the output.
+\item \code{"path"} - the cumulative distance from the root to each
 tip (or, optionally, to every node), obtained by recursively
 summing branch distances over \code{phy$edge}. This is the
-total posterior dispersal distance per lineage per iteration.
-\item \code{"both"} — both of the above, returned together.
+total posterior dispersal distance per lineage per iteration,
+together with each node's age and total elapsed lineage time.
+\item \code{"both"} - both of the above, returned together.
+}
+
+The \code{nodes} argument restricts which rows are returned, and its
+default differs by \code{type} so that existing code is unaffected:
+\itemize{
+\item For \code{type = "branch"}: default \code{"all"} (every branch,
+internal and terminal). \code{nodes = "tips"} restricts to
+terminal branches only - i.e. the branch connecting each tip to
+its immediate ancestor.
+\item For \code{type = "path"}: default \code{"tips"} (cumulative
+root-to-tip distance per lineage). \code{nodes = "all"} also
+returns cumulative distance at every internal node.
 }
 }
+\section{Reference frame}{
+
+\describe{
+\item{\code{frame = "palaeo"} (default)}{Distances are measured
+between the posterior coordinates exactly as sampled by the Geo
+model, i.e. palaeocoordinates on each node's palaeomap. A lineage
+carried by a moving plate therefore accumulates distance from plate
+motion as well as from dispersal. This is the approach of
+O'Donovan et al. (2018) and Avaria-Llautureo et al. (2025), and the
+behaviour of earlier GeoModelR versions.}
+\item{\code{frame = "plate"}}{Each node's posterior coordinates are
+first reconstructed to their present-day position on the plate they
+sit on (\code{rgplates::reconstruct(..., reverse = TRUE)}), and
+distances are measured between those positions. This removes plate
+motion, so a lineage that stays on the same spot of a drifting plate
+has zero distance. Each node is reconstructed from its age rounded to
+the nearest integer Ma (the palaeomap it was sampled on); nodes of
+age 0 are not reconstructed. Requires the GPlates Web Service
+(internet).
+
+Samples that cannot be reconstructed (for example points not assigned
+to a plate, or a failed request) are \strong{kept} with \code{NA}
+coordinates and distances; cumulative \code{"path"} distances through
+them are also \code{NA}. A warning gives the totals, and a per-node
+table (\code{node_name}, \code{ape_node}, \code{height},
+\code{reconstruction_age}, \code{n_samples}, \code{n_failed}) is
+attached as \code{attr(result, "reconstruction")}.}
+}
+The frame used is stored in \code{attr(result, "frame")}.
+}
+
 \examples{
-\dontrun{
-phy <- ape::read.nexus("Median.trees")
-geo <- read_geo_ancstates("Primate.AncStates.txt", phy = phy)
+phy <- ape::read.nexus(system.file("extdata", "Median.trees",
+                                    package = "GeoModelR"))
+geo <- read_geo_ancstates(system.file("extdata", "Primate.AncStates.txt",
+                                      package = "GeoModelR"), phy = phy)
 
-# Per-branch great-circle distances
-bd <- get_dispersal_distance(geo, phy, type = "branch")
+# Terminal branches, with a dispersal rate (km / Myr) per iteration
+terminal_bd <- get_dispersal_distance(geo, phy, type = "branch", nodes = "tips")
+terminal_bd$rate_km_per_myr <- terminal_bd$distance_km / terminal_bd$branch_time_myr
 
-# Root-to-tip cumulative dispersal distance
+# Root-to-tip cumulative distance vs. lineage age
 rt <- get_dispersal_distance(geo, phy, type = "path")
-aggregate(path_distance_km ~ node_name, data = rt, FUN = mean)
+rt$rate_km_per_myr <- rt$path_distance_km / rt$lineage_time_myr
+cor(rt$height, rt$path_distance_km)
 
-# Both at once
-both <- get_dispersal_distance(geo, phy, type = "both")
-head(both$branch)
-head(both$path)
+\dontrun{
+# Remove plate motion (needs the GPlates Web Service)
+bd_plate <- get_dispersal_distance(geo, phy, frame = "plate")
+attr(bd_plate, "reconstruction")   # failed samples per node
 }
 
+}
+\references{
+O'Donovan, C., Meade, A., & Venditti, C. (2018). Dinosaurs reveal the
+geographical signature of an evolutionary radiation. Nature Ecology &
+Evolution, 2, 452-458. \doi{10.1038/s41559-017-0454-6}
+
+Avaria-Llautureo, J., Puschel, T. A., Meade, A., Baker, J.,
+Nicholson, S. L., & Venditti, C. (2025). The radiation and geographic
+expansion of primates through diverse climates. Proceedings of the
+National Academy of Sciences, 122(32), e2423833122.
+\doi{10.1073/pnas.2423833122}
 }

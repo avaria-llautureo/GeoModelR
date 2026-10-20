@@ -32,15 +32,21 @@ once and stored in a \code{geo_paleomaps} object. Pass this object to
 function via the \code{maps} argument to avoid repeated GWS calls.
 }
 \examples{
+\dontrun{
+# Requires an internet connection (GPlates Web Service)
+tree_file <- system.file("extdata", "Median.trees", package = "GeoModelR")
+anc_file  <- system.file("extdata", "Primate.AncStates.txt",
+                         package = "GeoModelR")
+
 # From a tree (no BayesTraits output needed for data preparation)
-library(ape)
-phy  <- read.nexus("Median.trees")
-maps <- get_paleomaps(max_age = ceiling(max(node.depth.edgelength(phy))))
+phy  <- ape::read.nexus(tree_file)
+maps <- get_paleomaps(max_age = ceiling(max(ape::node.depth.edgelength(phy))))
 
 # Or from a geo_ancstates object
-geo  <- read_geo_ancstates("Geo_Primates_AncStates.txt")
+geo  <- read_geo_ancstates(anc_file)
 maps <- get_paleomaps(geo)
 
 # Use in plotting
-plot_node_palaeo(geo, "Node-00000", maps = maps)
+plot_node(geo, "Node-00000", maps = maps)
+}
 }

@@ -29,30 +29,35 @@
 #' @return A \code{geo_ancstates} object (a list with S3 class
 #'   \code{"geo_ancstates"}) containing:
 #'   \itemize{
-#'     \item \code{nodes} — data.frame of node metadata, one row per node
+#'     \item \code{nodes} - data.frame of node metadata, one row per node
 #'           (\code{node_name}, \code{branch_length}, \code{height},
 #'           \code{restriction_map}, \code{n_taxa}, \code{taxa}, and
 #'           \code{ape_node} if \code{phy} is supplied).
-#'     \item \code{mcmc} — data.frame of MCMC posterior samples in wide
+#'     \item \code{mcmc} - data.frame of MCMC posterior samples in wide
 #'           format, one row per iteration.
-#'     \item \code{coords} — tidy long-format data.frame with one row per
+#'     \item \code{coords} - tidy long-format data.frame with one row per
 #'           node x iteration, including \code{longitude}, \code{latitude},
 #'           and \code{branch_length_scaled}.
-#'     \item \code{file} — normalized path to the input file.
-#'     \item \code{n_nodes} — total number of nodes.
-#'     \item \code{n_iterations} — total number of MCMC iterations.
+#'     \item \code{file} - normalized path to the input file.
+#'     \item \code{n_nodes} - total number of nodes.
+#'     \item \code{n_iterations} - total number of MCMC iterations.
 #'   }
 #'
 #' @examples
-#' geo <- read_geo_ancstates("Primate.AncStates.txt")
+#' # Example data shipped with the package (primates, 50 posterior samples)
+#' anc_file  <- system.file("extdata", "Primate.AncStates.txt",
+#'                          package = "GeoModelR")
+#' tree_file <- system.file("extdata", "Median.trees", package = "GeoModelR")
+#'
+#' geo <- read_geo_ancstates(anc_file)
 #'
 #' # With ape node matching at parse time
-#' phy <- ape::read.nexus("Median.trees")
-#' geo <- read_geo_ancstates("Primate.AncStates.txt", phy = phy)
+#' phy <- ape::read.nexus(tree_file)
+#' geo <- read_geo_ancstates(anc_file, phy = phy)
 #'
 #' print(geo)
 #' summary(geo)
-
+#'
 #' @export
 read_geo_ancstates <- function(file, phy = NULL, verbose = TRUE) {
 
@@ -93,12 +98,12 @@ read_geo_ancstates <- function(file, phy = NULL, verbose = TRUE) {
   }
 
   # ---------------------------------------------------------------------------
-  # 3. Parse Block 1 — Node metadata
+  # 3. Parse Block 1 - Node metadata
   # ---------------------------------------------------------------------------
   nodes <- .parse_node_block(node_lines)
 
   # ---------------------------------------------------------------------------
-  # 4. Parse Block 2 — MCMC posterior samples
+  # 4. Parse Block 2 - MCMC posterior samples
   # ---------------------------------------------------------------------------
   mcmc <- .parse_mcmc_block(mcmc_lines)
 
@@ -151,10 +156,22 @@ read_geo_ancstates <- function(file, phy = NULL, verbose = TRUE) {
 #' \itemize{
 #'   \item Tip nodes: matched directly by \code{phy$tip.label}.
 #'         Tip numbers in ape are \code{1:Ntip(phy)}.
-#'   \item Internal nodes: matched via \code{ape::getMRCA()} on the full
-#'         set of taxa in each node's taxa list. The ape node number for
-#'         internal nodes is \code{Ntip(phy) + 1 : Ntip(phy) + Nnode(phy)}.
+#'   \item Internal nodes: matched by their exact set of descendant taxa.
+#'         Each BayesTraits node is assigned the ape node whose clade
+#'         contains exactly the same tips (no more, no fewer). Internal
+#'         ape node numbers run from \code{Ntip(phy) + 1} to
+#'         \code{Ntip(phy) + Nnode(phy)}.
 #' }
+#'
+#' Because the match is exact, a tree that differs from the one used in
+#' BayesTraits (different tips or a different topology) is detected and
+#' the function stops with a list of the nodes that do not match, instead
+#' of silently returning the most recent common ancestor of a mismatched
+#' clade.
+#'
+#' The function can be run more than once on the same object (for example
+#' after re-reading the tree): any existing \code{ape_node} column is
+#' replaced.
 #'
 #' @param geo     A \code{geo_ancstates} object from \code{read_geo_ancstates()}.
 #' @param phy     A \code{phylo} object (\pkg{ape}). Must be the same tree
@@ -164,23 +181,26 @@ read_geo_ancstates <- function(file, phy = NULL, verbose = TRUE) {
 #'         \code{geo$nodes} and \code{geo$coords}.
 #'
 #' @examples
-#' geo <- read_geo_ancstates("Primate.AncStates.txt")
-#' phy <- ape::read.nexus("Median.trees")
+#' anc_file  <- system.file("extdata", "Primate.AncStates.txt",
+#'                          package = "GeoModelR")
+#' tree_file <- system.file("extdata", "Median.trees", package = "GeoModelR")
+#' phy <- ape::read.nexus(tree_file)
 #'
-#' # Option 1 — at parse time
-#' geo <- read_geo_ancstates("Primate.AncStates.txt", phy = phy)
+#' # Option 1 - at parse time
+#' geo <- read_geo_ancstates(anc_file, phy = phy)
 #'
-#' # Option 2 — after parsing
+#' # Option 2 - after parsing
+#' geo <- read_geo_ancstates(anc_file)
 #' geo <- add_ape_nodes(geo, phy)
 #'
 #' # Access by BayesTraits name
-#' geo$nodes[geo$nodes$node_name == "Node-00008", "ape_node"] # Primate crown node
+#' geo$nodes[geo$nodes$node_name == "Node-00008", "ape_node"]
 #'
 #' # Access by ape node number
 #' geo$nodes[geo$nodes$ape_node == 903, "node_name"]
 #'
 #' # Filter coords by ape node number
-#' geo$coords[geo$coords$ape_node == 903, ]
+#' head(geo$coords[geo$coords$ape_node == 903, ])
 #' @export
 add_ape_nodes <- function(geo, phy, verbose = TRUE) {
 
@@ -188,72 +208,68 @@ add_ape_nodes <- function(geo, phy, verbose = TRUE) {
     stop("'geo' must be a geo_ancstates object from read_geo_ancstates().")
   if (!inherits(phy, "phylo"))
     stop("'phy' must be a phylo object (ape::read.tree / ape::read.nexus).")
-  if (!requireNamespace("ape", quietly = TRUE))
-    stop("Package 'ape' is required. Install with: install.packages('ape')")
 
-  n_tips <- ape::Ntip(phy)
-  nodes  <- geo$nodes
+  # Drop any mapping from a previous call (including the ape_node.x /
+  # ape_node.y columns left by GeoModelR <= 0.2.0 when run twice).
+  old_cols <- c("ape_node", "ape_node.x", "ape_node.y")
+  geo$nodes  <- geo$nodes[,  setdiff(names(geo$nodes),  old_cols), drop = FALSE]
+  geo$coords <- geo$coords[, setdiff(names(geo$coords), old_cols), drop = FALSE]
 
-  ape_node <- vapply(seq_len(nrow(nodes)), function(i) {
+  n_tips  <- ape::Ntip(phy)
+  n_inner <- ape::Nnode(phy)
+  nodes   <- geo$nodes
+  is_tip  <- nodes$n_taxa == 1L
 
-    taxa   <- nodes$taxa[[i]]
-    n_taxa <- nodes$n_taxa[i]
+  # Same number of tips and internal nodes?
+  n_tips_geo  <- sum(is_tip)
+  n_inner_geo <- sum(nodes$n_taxa > 1L)
+  if (n_tips_geo != n_tips || n_inner_geo != n_inner)
+    stop(sprintf(paste0(
+      "'phy' does not match 'geo': phy has %d tips and %d internal nodes, ",
+      "geo has %d tips and %d internal nodes.\n",
+      "  Supply the same tree used in the BayesTraits analysis."),
+      n_tips, n_inner, n_tips_geo, n_inner_geo))
 
-    if (n_taxa == 0) return(NA_integer_)
+  # Key each clade by its sorted tip labels. ape::prop.part() returns one
+  # element per internal node, in order Ntip + 1, Ntip + 2, ...
+  clade_key <- function(labels) paste(sort(labels, method = "radix"),
+                                      collapse = "\r")
+  phy_keys  <- vapply(ape::prop.part(phy),
+                      function(idx) clade_key(phy$tip.label[idx]),
+                      character(1))
 
-    if (n_taxa == 1) {
-      # Tip node — look up directly in tip.label
-      idx <- match(taxa[1], phy$tip.label)
-      if (is.na(idx)) {
-        warning(sprintf(
-          "Tip '%s' (node %s) not found in phy$tip.label — ape_node set to NA.",
-          taxa[1], nodes$node_name[i]
-        ))
-      }
-      return(if (is.na(idx)) NA_integer_ else as.integer(idx))
-    }
+  ape_node <- rep(NA_integer_, nrow(nodes))
+  ape_node[is_tip] <- match(vapply(nodes$taxa[is_tip], `[`, character(1), 1L),
+                            phy$tip.label)
+  inner <- which(!is_tip & nodes$n_taxa > 1L)
+  ape_node[inner] <- n_tips + match(
+    vapply(nodes$taxa[inner], clade_key, character(1)), phy_keys)
 
-    # Internal node — find MRCA of all taxa present in phy
-    present <- taxa[taxa %in% phy$tip.label]
-    if (length(present) < 2) {
-      warning(sprintf(
-        "Node %s: fewer than 2 taxa found in phy$tip.label — ape_node set to NA.",
-        nodes$node_name[i]
-      ))
-      return(NA_integer_)
-    }
-    as.integer(ape::getMRCA(phy, present))
+  bad <- which(is.na(ape_node) & nodes$n_taxa > 0L)
+  if (length(bad) > 0) {
+    show <- utils::head(bad, 10)
+    stop(sprintf(paste0(
+      "%d node(s) in 'geo' have no clade in 'phy' with exactly the same tips:\n",
+      "%s%s\n",
+      "  'phy' must be the same tree used in the BayesTraits analysis ",
+      "(same tip labels and topology)."),
+      length(bad),
+      paste0("  ", nodes$node_name[show], " (", nodes$n_taxa[show], " taxa)",
+             collapse = "\n"),
+      if (length(bad) > 10) sprintf("\n  ... and %d more", length(bad) - 10)
+      else ""))
+  }
 
-  }, integer(1))
-
-  # Add to $nodes
-  geo$nodes$ape_node <- ape_node
-
-  # Add to $coords via merge
-  node_map <- data.frame(
-    node_name = nodes$node_name,
-    ape_node  = ape_node,
-    stringsAsFactors = FALSE
-  )
-  geo$coords <- merge(geo$coords, node_map, by = "node_name",
-                      all.x = TRUE, sort = FALSE)
-  geo$coords <- geo$coords[order(geo$coords$iteration,
-                                  geo$coords$node_name), ]
-  rownames(geo$coords) <- NULL
+  # Add to $nodes and $coords (match() keeps the existing row order)
+  geo$nodes$ape_node  <- ape_node
+  geo$coords$ape_node <- ape_node[match(geo$coords$node_name, nodes$node_name)]
 
   if (verbose) {
-    n_matched <- sum(!is.na(ape_node))
-    n_tips_m  <- sum(!is.na(ape_node) & nodes$n_taxa == 1)
-    n_int_m   <- sum(!is.na(ape_node) & nodes$n_taxa  > 1)
     message(sprintf(
       "[add_ape_nodes] Matched %d / %d nodes  (%d tips, %d internal).",
-      n_matched, nrow(nodes), n_tips_m, n_int_m
+      sum(!is.na(ape_node)), nrow(nodes),
+      sum(!is.na(ape_node) & is_tip), sum(!is.na(ape_node) & !is_tip)
     ))
-    if (any(is.na(ape_node)))
-      message(sprintf(
-        "  %d node(s) could not be matched — check that phy$tip.label matches the BayesTraits taxon names.",
-        sum(is.na(ape_node))
-      ))
   }
 
   geo
@@ -398,7 +414,7 @@ add_ape_nodes <- function(geo, phy, verbose = TRUE) {
 # =============================================================================
 #' @export
 print.geo_ancstates <- function(x, ...) {
-  cat("BayesTraits Geo Model — AncStates\n")
+  cat("BayesTraits Geo Model - AncStates\n")
   cat("  File      :", x$file, "\n")
   cat("  Nodes     :", x$n_nodes,
       sprintf("(%d tips, %d internal)",

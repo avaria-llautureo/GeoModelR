@@ -6,6 +6,9 @@
 \usage{
 clear_map_cache()
 }
+\value{
+Nothing; called for its side effect.
+}
 \description{
 Clear the in-session palaeomap cache
 }

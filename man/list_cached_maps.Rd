@@ -6,6 +6,9 @@
 \usage{
 list_cached_maps()
 }
+\value{
+Character vector of cache keys.
+}
 \description{
 List palaeomaps currently held in the session cache
 }

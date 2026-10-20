@@ -62,8 +62,19 @@ A ggplot2 or patchwork object.
 Plot the posterior distribution of coordinates for a single node
 }
 \examples{
-geo <- read_geo_ancstates("Primate.AncStates.txt")
+\dontrun{
+# Requires an internet connection (palaeomaps from the GPlates Web Service)
+anc_file  <- system.file("extdata", "Primate.AncStates.txt",
+                         package = "GeoModelR")
+tree_file <- system.file("extdata", "Median.trees", package = "GeoModelR")
+phy  <- ape::read.nexus(tree_file)
+geo  <- read_geo_ancstates(anc_file, phy = phy)
+
 plot_node(geo, "Node-00008")
 plot_node(geo, "Node-00008", bbox = c(-82, -33, -56, -15))
+
+# Download the maps once and reuse them; add the tree panel
+maps <- get_paleomaps(geo)
 plot_node(geo, "Node-00008", phy = phy, maps = maps)
+}
 }

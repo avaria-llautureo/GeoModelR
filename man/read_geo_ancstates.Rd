@@ -22,18 +22,18 @@ completion (default \code{TRUE}).}
 A \code{geo_ancstates} object (a list with S3 class
 \code{"geo_ancstates"}) containing:
 \itemize{
-\item \code{nodes} — data.frame of node metadata, one row per node
+\item \code{nodes} - data.frame of node metadata, one row per node
 (\code{node_name}, \code{branch_length}, \code{height},
 \code{restriction_map}, \code{n_taxa}, \code{taxa}, and
 \code{ape_node} if \code{phy} is supplied).
-\item \code{mcmc} — data.frame of MCMC posterior samples in wide
+\item \code{mcmc} - data.frame of MCMC posterior samples in wide
 format, one row per iteration.
-\item \code{coords} — tidy long-format data.frame with one row per
+\item \code{coords} - tidy long-format data.frame with one row per
 node x iteration, including \code{longitude}, \code{latitude},
 and \code{branch_length_scaled}.
-\item \code{file} — normalized path to the input file.
-\item \code{n_nodes} — total number of nodes.
-\item \code{n_iterations} — total number of MCMC iterations.
+\item \code{file} - normalized path to the input file.
+\item \code{n_nodes} - total number of nodes.
+\item \code{n_iterations} - total number of MCMC iterations.
 }
 }
 \description{
@@ -56,12 +56,18 @@ tree. This step can also be run afterwards with \code{add_ape_nodes()}.
 The supplied tree must be the same tree used in the BayesTraits analysis.
 }
 \examples{
-geo <- read_geo_ancstates("Primate.AncStates.txt")
+# Example data shipped with the package (primates, 50 posterior samples)
+anc_file  <- system.file("extdata", "Primate.AncStates.txt",
+                         package = "GeoModelR")
+tree_file <- system.file("extdata", "Median.trees", package = "GeoModelR")
+
+geo <- read_geo_ancstates(anc_file)
 
 # With ape node matching at parse time
-phy <- ape::read.nexus("Median.trees")
-geo <- read_geo_ancstates("Primate.AncStates.txt", phy = phy)
+phy <- ape::read.nexus(tree_file)
+geo <- read_geo_ancstates(anc_file, phy = phy)
 
 print(geo)
 summary(geo)
+
 }

@@ -1,5 +1,5 @@
 # =============================================================================
-# GeoModelR — Palaeomap Preparation Functions
+# GeoModelR - Palaeomap Preparation Functions
 # Functions to build geographic input files for BayesTraits Geo model analysis.
 # Run these BEFORE your BayesTraits analysis.
 #
@@ -13,7 +13,7 @@
 # =============================================================================
 
 # =============================================================================
-# SECTION 1 — PALAEOMAP PREPARATION
+# SECTION 1 - PALAEOMAP PREPARATION
 # Functions to build geographic input files for the BayesTraits Geo model.
 # Run these before your BayesTraits analysis.
 # =============================================================================
@@ -39,17 +39,23 @@
 #'         the \code{maps} argument.
 #'
 #' @examples
+#' \dontrun{
+#' # Requires an internet connection (GPlates Web Service)
+#' tree_file <- system.file("extdata", "Median.trees", package = "GeoModelR")
+#' anc_file  <- system.file("extdata", "Primate.AncStates.txt",
+#'                          package = "GeoModelR")
+#'
 #' # From a tree (no BayesTraits output needed for data preparation)
-#' library(ape)
-#' phy  <- read.nexus("Median.trees")
-#' maps <- get_paleomaps(max_age = ceiling(max(node.depth.edgelength(phy))))
+#' phy  <- ape::read.nexus(tree_file)
+#' maps <- get_paleomaps(max_age = ceiling(max(ape::node.depth.edgelength(phy))))
 #'
 #' # Or from a geo_ancstates object
-#' geo  <- read_geo_ancstates("Geo_Primates_AncStates.txt")
+#' geo  <- read_geo_ancstates(anc_file)
 #' maps <- get_paleomaps(geo)
 #'
 #' # Use in plotting
-#' plot_node_palaeo(geo, "Node-00000", maps = maps)
+#' plot_node(geo, "Node-00000", maps = maps)
+#' }
 #' @export
 get_paleomaps <- function(geo     = NULL,
                            max_age = NULL,
@@ -89,22 +95,24 @@ get_paleomaps <- function(geo     = NULL,
     if (i %% 10 == 0 || i == n)
       message(sprintf("  ... %d / %d ages downloaded", i, n))
 
-    coastlines[[i]] <- tryCatch({
+    # Single-bracket assignment keeps a NULL placeholder for failed ages;
+    # coastlines[[i]] <- NULL would delete the element and shift later ages.
+    coastlines[i] <- list(tryCatch({
       raw <- rgplates::reconstruct("coastlines", age = age, model = model)
       cs <- sf::st_make_valid(raw)
       if (any(sf::st_geometry_type(cs) == "GEOMETRYCOLLECTION")) {
         cs <- tryCatch(
           sf::st_collection_extract(cs, "POLYGON"),
-          error = function(e) cs   # already clean — skip extraction
+          error = function(e) cs   # already clean - skip extraction
         )
       }
       cs
     }, error = function(e) {
-      message(sprintf("  WARNING: age %d Ma failed (%s) — skipping.",
+      message(sprintf("  WARNING: age %d Ma failed (%s) - skipping.",
                       age, conditionMessage(e)))
       failed <<- c(failed, age)
       NULL
-    })
+    }))
 
     if (age > 0 && i < n) Sys.sleep(0.3)   # avoid GWS rate-limiting
   }
@@ -127,6 +135,9 @@ get_paleomaps <- function(geo     = NULL,
 }
 
 #' Print method for geo_paleomaps
+#' @param x   A \code{geo_paleomaps} object from \code{get_paleomaps()}.
+#' @param ... Unused.
+#' @return \code{x}, invisibly.
 #' @export
 print.geo_paleomaps <- function(x, ...) {
   cat("Palaeomap collection (geo_paleomaps)\n")
@@ -148,7 +159,7 @@ print.geo_paleomaps <- function(x, ...) {
 #'
 #' @param age        Numeric vector. Age(s) in Ma. Default \code{0}.
 #' @param maps       A \code{geo_paleomaps} object from \code{get_paleomaps()}.
-#'                   Recommended for batch use — avoids re-downloading.
+#'                   Recommended for batch use - avoids re-downloading.
 #' @param model      Character. rgplates model (default \code{"PALEOMAP"}).
 #'                   Ignored when \code{maps} is supplied.
 #' @param extent     Numeric \code{c(xmin, xmax, ymin, ymax)}.
@@ -163,6 +174,8 @@ print.geo_paleomaps <- function(x, ...) {
 #'         Otherwise: invisibly returns the output directory path.
 #'
 #' @examples
+#' \dontrun{
+#' # Requires an internet connection (GPlates Web Service)
 #' # Inspect one map before committing to full resolution
 #' df <- sf_to_csv(age = 50)
 #' library(ggplot2)
@@ -175,6 +188,7 @@ print.geo_paleomaps <- function(x, ...) {
 #' # Batch: write all ages from a maps object
 #' maps <- get_paleomaps(max_age = 74)
 #' sf_to_csv(age = maps$ages, maps = maps, resolution = 1, dir = "maps_csv")
+#' }
 #' @export
 sf_to_csv <- function(age        = 0,
                        maps       = NULL,
@@ -205,7 +219,7 @@ sf_to_csv <- function(age        = 0,
   multi_age <- length(age) > 1 || write
   if (multi_age && !dir.exists(dir)) dir.create(dir, recursive = TRUE)
 
-  # Build raster template once — reused for all ages
+  # Build raster template once - reused for all ages
   grid_template <- terra::rast(
     xmin = extent[1], xmax = extent[2],
     ymin = extent[3], ymax = extent[4],
@@ -244,19 +258,19 @@ sf_to_csv <- function(age        = 0,
         cs
       }
     }, error = function(e) {
-      warning(sprintf("Age %d Ma: could not get coastlines (%s) — skipping.",
+      warning(sprintf("Age %d Ma: could not get coastlines (%s) - skipping.",
                       a, conditionMessage(e)))
       NULL
     })
     if (is.null(coast_sf)) next
 
-    # terra::rasterize requires a plain sf — strip any extra classes
+    # terra::rasterize requires a plain sf - strip any extra classes
     class(coast_sf) <- c("sf", "data.frame")
 
     map_rast <- tryCatch(
       terra::rasterize(coast_sf, grid_template),
       error = function(e) {
-        warning(sprintf("Age %d Ma: rasterization failed (%s) — skipping.",
+        warning(sprintf("Age %d Ma: rasterization failed (%s) - skipping.",
                         a, conditionMessage(e)))
         NULL
       }
@@ -310,9 +324,14 @@ sf_to_csv <- function(age        = 0,
 #' @return Invisibly returns the output directory path.
 #'
 #' @examples
+#' \dontrun{
+#' # Requires an internet connection (GPlates Web Service)
+#' geo  <- read_geo_ancstates(system.file("extdata", "Primate.AncStates.txt",
+#'                                        package = "GeoModelR"))
 #' maps <- get_paleomaps(geo)
-#' export_restriction_maps(maps)
-#' export_restriction_maps(maps, ages = get_node_ages(geo))
+#' export_restriction_maps(maps, dir = tempdir())
+#' export_restriction_maps(maps, dir = tempdir(), ages = get_node_ages(geo))
+#' }
 #' @export
 export_restriction_maps <- function(maps,
                                      dir     = "restriction_maps",
@@ -399,7 +418,9 @@ export_restriction_maps <- function(maps,
 #' @return Invisibly returns the output file path.
 #'
 #' @examples
-#' maps <- get_paleomaps(geo)
+#' \dontrun{
+#' # Requires an internet connection (GPlates Web Service)
+#' maps <- get_paleomaps(max_age = 74)
 #' sf_to_csv(age = maps$ages, maps = maps, dir = "maps_csv")
 #'
 #' # Write the BuildMaps file
@@ -413,6 +434,7 @@ export_restriction_maps <- function(maps,
 #' # Then in BayesTraits (command line):
 #' # BuildMaps BuildPrimatesMaps.txt
 #' # LoadMaps  PrimatesMaps.bin
+#' }
 #' @export
 write_buildmaps_file <- function(maps,
                                   bin_file  = "BinaryMap.bin",
@@ -430,7 +452,7 @@ write_buildmaps_file <- function(maps,
   if (grepl(" ", bin_file))
     stop("'bin_file' cannot contain spaces (BayesTraits requirement).")
 
-  # Determine ages to include — skip any that failed to download
+  # Determine ages to include - skip any that failed to download
   use_ages <- if (is.null(ages)) maps$ages else as.integer(sort(unique(ages)))
   available <- use_ages[!use_ages %in% maps$failed &
                         !vapply(maps$coastlines[as.character(use_ages)],
@@ -452,7 +474,7 @@ write_buildmaps_file <- function(maps,
   n         <- length(available)
 
   # Build time intervals using midpoints between adjacent ages so that every
-  # point in time is covered by exactly one map — works for both consecutive
+  # point in time is covered by exactly one map - works for both consecutive
   # integers (e.g. 0,1,2,3) and irregular spacing (e.g. 0,3,5,10):
   #   First map  : [0, midpoint(age[1], age[2]))
   #   Middle maps: [midpoint(age[i-1], age[i]), midpoint(age[i], age[i+1]))
@@ -488,8 +510,30 @@ To build the binary map file, run in BayesTraits:"))
 }
 
 
-
-
+#' Re-download palaeomaps that failed in get_paleomaps()
+#'
+#' The GPlates Web Service occasionally fails for individual ages (time-outs,
+#' rate limiting). \code{get_paleomaps()} records those ages in
+#' \code{maps$failed} and keeps an empty (\code{NULL}) slot for them. This
+#' function retries the download for those ages, or for any ages you supply,
+#' and returns the updated \code{geo_paleomaps} object.
+#'
+#' @param maps    A \code{geo_paleomaps} object from \code{get_paleomaps()}.
+#' @param ages    Integer vector or \code{NULL}. Ages (Ma) to (re-)download.
+#'                \code{NULL} (default) retries every age that is missing or
+#'                listed in \code{maps$failed}. Ages not yet in \code{maps}
+#'                are added.
+#' @param verbose Logical. Report progress for each age (default \code{TRUE}).
+#' @return The updated \code{geo_paleomaps} object. \code{maps$failed}
+#'         lists any ages that still could not be downloaded.
+#'
+#' @examples
+#' \dontrun{
+#' # Requires an internet connection (GPlates Web Service)
+#' maps <- get_paleomaps(max_age = 74)
+#' maps <- fill_missing_maps(maps)          # retry failed ages
+#' maps <- fill_missing_maps(maps, ages = 75:80)  # add new ages
+#' }
 #' @export
 fill_missing_maps <- function(maps, ages = NULL, verbose = TRUE) {
 
@@ -518,7 +562,7 @@ fill_missing_maps <- function(maps, ages = NULL, verbose = TRUE) {
   }
 
   if (length(fill_ages) == 0) {
-    message("[fill_missing_maps] No missing maps found — nothing to do.")
+    message("[fill_missing_maps] No missing maps found - nothing to do.")
     return(invisible(maps))
   }
 
@@ -538,7 +582,7 @@ fill_missing_maps <- function(maps, ages = NULL, verbose = TRUE) {
       if (any(sf::st_geometry_type(cs) == "GEOMETRYCOLLECTION")) {
         cs <- tryCatch(
           sf::st_collection_extract(cs, "POLYGON"),
-          error = function(e) cs   # already clean — skip extraction
+          error = function(e) cs   # already clean - skip extraction
         )
       }
       cs
@@ -568,7 +612,7 @@ fill_missing_maps <- function(maps, ages = NULL, verbose = TRUE) {
       message(sprintf("[fill_missing_maps] Fixed: %s",
                       paste(newly_fixed, collapse = ", ")))
     if (length(still_failed) > 0)
-      message(sprintf("[fill_missing_maps] Still missing: %s — try again later.",
+      message(sprintf("[fill_missing_maps] Still missing: %s - try again later.",
                       paste(still_failed, collapse = ", ")))
     else
       message("[fill_missing_maps] All missing ages resolved.")

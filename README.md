@@ -1,160 +1,159 @@
-# GeoModelR <img src="man/figures/logo.png" align="right" height="120" alt="" />
+# GeoModelR
 
-<!-- badges -->
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/avaria-llautureo/GeoModelR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/avaria-llautureo/GeoModelR/actions/workflows/R-CMD-check.yaml)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-
----
+<!-- badges: end -->
 
 ## Overview
 
-**GeoModelR** provides R tools for working with the **Geographical (Geo) model** implemented in [BayesTraits v5+](https://www.evolution.reading.ac.uk/BayesTraitsV5.0.3/BayesTraitsV5.0.3.html). The Geo model reconstructs the posterior distribution of ancestral geographic coordinates across the nodes of a phylogenetic tree, optionally restricting inference to land or ocean areas using palaeomaps.
+**GeoModelR** provides R tools for the **Geographical (Geo) model** in
+[BayesTraits v5+](https://www.evolution.reading.ac.uk/BayesTraitsV5.0.3/BayesTraitsV5.0.3.html).
+The Geo model reconstructs the posterior distribution of ancestral geographic
+coordinates across the nodes of a phylogeny. The model works in continuous, spherical space, 
+allowing dispersal rates to vary across branches, and optionally restricting inference to land or ocean using palaemaps.
 
-The package covers two workflows:
+The current package version covers three workflows.
 
-### Section 1 — Palaeomap Preparation *(run before BayesTraits)*
-Download palaeocoastlines and generate the binary restriction map files that BayesTraits needs to run the Geo model with palaeogeographic constraints.
+### 1. Input data preparation *(before BayesTraits)*
 
 | Function | Description |
 |---|---|
-| `get_paleomaps()` | Download all palaeomaps for a tree's age range |
+| `clean_sister_geodata()` | Find sister taxa with overlapping coordinates (< 50 m by default) and remove overlapping distribution points, 
+to avoid zero-length scaled branches under the variable-rates model |
+
+### 2. Palaeomap preparation *(before BayesTraits)*
+
+| Function | Description |
+|---|---|
+| `get_paleomaps()` | Download all palaeomaps (using rgplates::reconstruct()) for a tree's age range |
 | `fill_missing_maps()` | Re-download any ages that failed |
 | `sf_to_csv()` | Convert palaeomaps to binary land/ocean CSV grids |
 | `export_restriction_maps()` | Write raw polygon CSVs |
 | `write_buildmaps_file()` | Write the BayesTraits `BuildMaps` input file |
 
-### Section 2 — Output Exploration *(run after BayesTraits)*
-Read Geo model output and visualise the posterior distribution of ancestral locations on age-matched palaeomaps.
+### 3. Output exploration *(after BayesTraits)*
 
 | Function | Description |
 |---|---|
 | `read_geo_ancstates()` | Parse a `*.AncStates.txt` output file |
-| `add_ape_nodes()` | Match BayesTraits node names to ape node numbers |
+| `add_ape_nodes()` | Match BayesTraits node names to ape node numbers (exact clade match) |
 | `plot_node()` | Posterior distribution for a single node |
 | `plot_timeinterval()` | All nodes within a time window |
 | `plot_clade()` | All nodes within a clade |
-
----
-
-## Citation
-
-If you use GeoModelR, please cite the paper that introduced the Geo model with palaeomap restrictions:
-
-> Avaria-Llautureo, J., et al. (2025). *The radiation and geographic expansion of primates through diverse climates*. **PNAS**, 122(18). <https://doi.org/10.1073/pnas.2423833122>
+| `get_dispersal_distance()` | Posterior branch and root-to-tip dispersal distances, in the palaeo or plate reference frame |
 
 ---
 
 ## Installation
 
-GeoModelR is currently in beta. Install directly from GitHub:
-
 ```r
-# Install devtools if needed
-install.packages("devtools")
-
-# Install GeoModelR
-devtools::install_github("avaria-llautureo/GeoModelR")
+# install.packages("remotes")
+remotes::install_github("avaria-llautureo/GeoModelR", build_vignettes = TRUE)
 ```
 
-### Required dependencies
+Optional packages for the tree panel in `plot_node()` and HPD contours:
 
 ```r
-install.packages(c(
-  "ape",       # phylogenetic trees
-  "rgplates",  # GPlates Web Service
-  "httr2",     # required by rgplates
-  "sf",        # spatial features
-  "terra",     # rasterisation (Section 1)
-  "ggplot2"    # plotting
-))
-
-# For the tree panel in plot_node():
-if (!requireNamespace("BiocManager")) install.packages("BiocManager")
+if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
 BiocManager::install("ggtree")
-install.packages(c("deeptime", "patchwork"))
-
-# Optional: HPD density contours
-install.packages("ggdensity")
+install.packages(c("deeptime", "patchwork", "ggdensity"))
 ```
+
+Downloading palaeomaps and `frame = "plate"` need an internet connection
+(GPlates Web Service, via [rgplates](https://CRAN.R-project.org/package=rgplates)).
 
 ---
 
 ## Quick start
 
-### Section 1 — Prepare maps for BayesTraits
+A full walkthrough with the bundled primate data is in the vignette:
 
 ```r
-library(GeoModelR)
-library(ape)
-
-phy  <- read.nexus("your_tree.nex")
-
-# Download all palaeomaps for the tree age range
-maps <- get_paleomaps(max_age = ceiling(max(node.depth.edgelength(phy))))
-
-# Fix any failed downloads
-maps <- fill_missing_maps(maps)
-
-# Inspect csv maps before committing to the full resolution and writing
-df <- sf_to_csv(age = 100, maps = maps, resolution = 2)
-
-# Plot test csv map
-ggplot(df, aes(x = Lon, y = Lat, fill = factor(mask))) +
-  geom_raster() +
-  scale_fill_manual(values = c("0" = "lightblue", "1" = "tan"),
-                    labels = c("Ocean", "Land"), name = NULL) +
-  coord_fixed(expand = FALSE) + theme_bw()
-
-# Write binary land/ocean CSV files
-sf_to_csv(age = maps$ages, maps = maps, resolution = 1, dir = "maps_csv")
-
-# Write the BayesTraits BuildMaps input file
-write_buildmaps_file(maps)
-# Then, follow the BayesTraits manual instructions to build the input map-file format for analysis
+vignette("GeoModelR")
 ```
 
-### Section 2 — Explore Geo model output
+### Clean input coordinates
 
 ```r
 library(GeoModelR)
-library(ape)
 
-# Read output file and link to tree
-phy <- read.nexus("your_tree.nex")
-geo <- read_geo_ancstates("your_analysis.AncStates.txt", phy = phy)
-print(geo)
+phy    <- ape::read.nexus("your_tree.nex")
+single <- read.table("Single_Coord_Data.txt", sep = "\t")
+dist   <- read.table("Distribution_Data.txt", sep = "\t")
 
-# Plot root node posterior on its age-matched palaeomap
-plot_node(geo, "Node-00000") 
+res <- clean_sister_geodata(phy, single, dist, seed = 1)
+# If sister centroids overlap, the function stops and lists the pairs.
+# Choose which taxa to remove and run again:
+res <- clean_sister_geodata(phy, single, dist, seed = 1,
+                            delete = c("Species_a"))
+res$deletion_log
+res$clean_tree        # tree without the deleted taxa
+```
 
-# With tree panel and regional zoom
-plot_node(geo, "Node-00000",
-                 phy  = phy,
-                 bbox = c(-130, -30, 20, 85),
-                 pt_size = 4)
+### Prepare maps for BayesTraits
 
-# All nodes in a time window, using median coordinates per node
-plot_timeinterval(geo, age_min = 8, age_max = 10)
+```r
+maps <- get_paleomaps(max_age = ceiling(max(ape::node.depth.edgelength(phy))))
+maps <- fill_missing_maps(maps)
 
-# All nodes in a clade, using median coordinates per node
-plot_clade(geo, tips = find_tips(geo, "Homo")) # Homo clade
+# Inspect one map before writing them all
+df <- sf_to_csv(age = 50, maps = maps, resolution = 2)
+
+sf_to_csv(age = maps$ages, maps = maps, resolution = 1, dir = "maps_csv")
+write_buildmaps_file(maps)
+# Then follow the BayesTraits manual: BuildMaps / LoadMaps
+```
+
+### Explore Geo model output
+
+```r
+# Bundled example data
+phy <- ape::read.nexus(system.file("extdata", "Median.trees", package = "GeoModelR"))
+geo <- read_geo_ancstates(system.file("extdata", "Primate.AncStates.txt",
+                                      package = "GeoModelR"), phy = phy)
+
+maps <- get_paleomaps(geo)
+plot_node(geo, "Node-00008", maps = maps)                 # crown primates
+plot_node(geo, "Node-00008", phy = phy, maps = maps)      # with tree panel
+plot_timeinterval(geo, age_min = 8, age_max = 10, maps = maps)
+plot_clade(geo, tips = find_tips(geo, "^Homo"), maps = maps)
+
+# Dispersal distances per branch and posterior sample
+bd <- get_dispersal_distance(geo, phy, type = "branch")
+bd_plate <- get_dispersal_distance(geo, phy, frame = "plate")  # plate motion removed
 ```
 
 ---
 
-## Example dataset
+## Example data
 
-The `data-raw/` folder contains a minimal example from the primate analysis in Avaria-Llautureo et al. (2025):
-- `Primate.AncStates.txt` — truncated AncStates output (50 iterations)
-- `Median.trees` — one of the hundreds of primate phylogenetic trees analysed in the study
+`inst/extdata/` (available with `system.file("extdata", package = "GeoModelR")`)
+contains a minimal example from the primate analysis in Avaria-Llautureo et
+al. (2025):
+
+- `Primate.AncStates.txt`: truncated AncStates output (50 posterior samples)
+- `Median.trees`: one of the primate phylogenies analysed in the study
+
+---
+
+## Citation
+
+```r
+citation("GeoModelR")
+```
+
+> Avaria-Llautureo, J., Püschel, T. A., Meade, A., Baker, J., Nicholson, S. L.,
+> & Venditti, C. (2025). The radiation and geographic expansion of primates
+> through diverse climates. *PNAS*, 122(32), e2423833122.
+> <https://doi.org/10.1073/pnas.2423833122>
 
 ---
 
 ## Feedback
 
-This is a beta release. Bug reports and feature requests are welcome via [GitHub Issues](https://github.com/avaria-llautureo/GeoModelR/issues).
-
----
-
+Bug reports and feature requests are welcome via
+[GitHub Issues](https://github.com/avaria-llautureo/GeoModelR/issues).
 
 ## License
 

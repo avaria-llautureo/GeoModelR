@@ -6,6 +6,14 @@
 \usage{
 \method{print}{geo_paleomaps}(x, ...)
 }
+\arguments{
+\item{x}{A \code{geo_paleomaps} object from \code{get_paleomaps()}.}
+
+\item{...}{Unused.}
+}
+\value{
+\code{x}, invisibly.
+}
 \description{
 Print method for geo_paleomaps
 }

@@ -20,7 +20,7 @@ sf_to_csv(
 \item{age}{Numeric vector. Age(s) in Ma. Default \code{0}.}
 
 \item{maps}{A \code{geo_paleomaps} object from \code{get_paleomaps()}.
-Recommended for batch use — avoids re-downloading.}
+Recommended for batch use - avoids re-downloading.}
 
 \item{model}{Character. rgplates model (default \code{"PALEOMAP"}).
 Ignored when \code{maps} is supplied.}
@@ -50,6 +50,8 @@ command. For a single age, returns a data frame for inspection. For multiple
 ages, writes one file per age to \code{dir}.
 }
 \examples{
+\dontrun{
+# Requires an internet connection (GPlates Web Service)
 # Inspect one map before committing to full resolution
 df <- sf_to_csv(age = 50)
 library(ggplot2)
@@ -62,4 +64,5 @@ ggplot(df, aes(x = Lon, y = Lat, fill = factor(mask))) +
 # Batch: write all ages from a maps object
 maps <- get_paleomaps(max_age = 74)
 sf_to_csv(age = maps$ages, maps = maps, resolution = 1, dir = "maps_csv")
+}
 }

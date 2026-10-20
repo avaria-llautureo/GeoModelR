@@ -1,0 +1,242 @@
+---
+title: "GeoModelR: a primate walkthrough"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{GeoModelR: a primate walkthrough}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
+                      fig.width = 7, fig.height = 4)
+```
+
+This vignette walks through a typical GeoModelR session using the primate
+example data shipped with the package: one dated primate phylogeny (894
+species, living and fossil) and a short excerpt (50 posterior samples) of a
+BayesTraits Geo model run from Avaria-Llautureo et al. (2025).
+
+The workflow has three parts:
+
+1. **Before BayesTraits** - clean the input coordinates and prepare
+   palaeomaps.
+2. **Run BayesTraits** - the Geo model itself (outside R).
+3. **After BayesTraits** - read the output, map ancestral locations and
+   measure dispersal.
+
+Chunks that need the GPlates Web Service (internet) are shown but not run
+here.
+
+```{r}
+library(GeoModelR)
+```
+
+## 1. Example data
+
+```{r}
+anc_file  <- system.file("extdata", "Primate.AncStates.txt", package = "GeoModelR")
+tree_file <- system.file("extdata", "Median.trees", package = "GeoModelR")
+
+phy <- ape::read.nexus(tree_file)
+phy
+```
+
+## 2. Before BayesTraits
+
+### Clean sister-taxon coordinates
+
+Under the variable-rates Geo model, sister taxa whose input coordinates are
+less than about 50 m apart can have the branches between them compressed to
+zero length. `clean_sister_geodata()` checks every pair of sister tips (and,
+optionally, a tip against its sister cherry) and removes overlapping
+distribution points.
+
+The two BayesTraits input files are usually read like this:
+
+```{r, eval = FALSE}
+single <- read.table("Single_Coord_Data.txt", sep = "\t", stringsAsFactors = FALSE)
+dist   <- read.table("Distribution_Data.txt", sep = "\t", stringsAsFactors = FALSE)
+```
+
+Here is a small made-up example so that every case appears:
+
+```{r}
+toy <- ape::read.tree(text = "((A:1,B:1):1,(C:1,(D:1,E:1):1):1);")
+
+single <- data.frame(V1 = c("A", "B", "C", "D", "E"),
+                     V2 = c(-70, -70.0002, -60, 10, 10.2),   # A and B ~20 m apart
+                     V3 = c(-30, -30, -20, 45, 45.2))
+
+dist <- data.frame(V1 = c("D", "E"), V2 = "Linked",
+                   V3 = c("10,10.5,11", "10.00001,12"),        # one shared point
+                   V4 = c("45,45.5,46", "45,47"))
+```
+
+When two sisters both rely on a single centroid and those centroids
+overlap, the function does not guess. It stops and lists the pairs:
+
+```{r, error = TRUE}
+clean_sister_geodata(toy, single, dist)
+```
+
+You decide which taxon to remove (or correct its coordinates) and run it
+again. The taxon is removed from the data and from the tree:
+
+```{r}
+res <- clean_sister_geodata(toy, single, dist, delete = "B")
+```
+
+The shared point was deleted from D, the taxon with more distribution
+points:
+
+```{r}
+res$deletion_log
+res$clean_distdata
+```
+
+In an interactive session, `ask = TRUE` shows a menu for each conflict
+instead. Write the cleaned files and tree for BayesTraits with:
+
+```{r, eval = FALSE}
+write.table(res$clean_singledata, "Single_Coord_Data_clean.txt", sep = "\t",
+            row.names = FALSE, col.names = FALSE, quote = FALSE)
+write.table(res$clean_distdata, "Distribution_Data_clean.txt", sep = "\t",
+            row.names = FALSE, col.names = FALSE, quote = FALSE)
+ape::write.nexus(res$clean_tree, file = "tree_clean.nex")
+```
+
+### Prepare palaeomaps
+
+Download one palaeocoastline map per million years, convert them to the
+land/ocean grids BayesTraits reads, and write the `BuildMaps` file:
+
+```{r, eval = FALSE}
+max_age <- ceiling(max(ape::node.depth.edgelength(phy)))
+maps <- get_paleomaps(max_age = max_age, model = "PALEOMAP")
+maps <- fill_missing_maps(maps)          # retry any ages that failed
+
+sf_to_csv(age = maps$ages, maps = maps, resolution = 1, dir = "maps_csv")
+write_buildmaps_file(maps, bin_file = "PrimateMaps.bin",
+                     out_file = "BuildPrimateMaps.txt")
+```
+
+Then, in BayesTraits, `BuildMaps BuildPrimateMaps.txt` and
+`LoadMaps PrimateMaps.bin`.
+
+## 3. After BayesTraits
+
+### Read the output
+
+`read_geo_ancstates()` parses the `*.AncStates.txt` file. Supplying the tree
+adds an `ape_node` column, so nodes can be referred to by their BayesTraits
+name or their ape number. The tree must be the one used in the analysis:
+`add_ape_nodes()` stops if any clade does not match exactly.
+
+```{r}
+geo <- read_geo_ancstates(anc_file, phy = phy)
+geo
+```
+
+`geo$coords` holds one row per node and posterior sample:
+
+```{r}
+head(geo$coords[, c("node_name", "ape_node", "iteration",
+                    "longitude", "latitude", "height")])
+```
+
+### Summarise a node
+
+The crown primate node is the most recent common ancestor of a lemur and
+a human:
+
+```{r}
+crown <- ape::getMRCA(phy, c("Lemur_catta", "Homo_sapiens"))
+crown_nm <- geo$nodes$node_name[geo$nodes$ape_node == crown]
+crown_nm
+
+s <- geo$coords[geo$coords$node_name == crown_nm, ]
+c(age_Ma = unique(s$height),
+  median_lon = median(s$longitude),
+  median_lat = median(s$latitude))
+```
+
+### Map ancestral locations
+
+The plotting functions draw the posterior samples on the palaeomap of each
+node's age. They download maps, so they are not run here. Download the maps
+once with `get_paleomaps()` and pass them via `maps` to avoid repeated
+requests.
+
+```{r, eval = FALSE}
+maps <- get_paleomaps(geo)
+
+plot_node(geo, crown_nm, maps = maps, show_density = TRUE)
+plot_node(geo, crown_nm, phy = phy, maps = maps)          # with tree panel
+
+plot_timeinterval(geo, age_min = 50, age_max = 56, maps = maps)
+
+lemurs <- find_tips(geo, "^(Lemur|Eulemur|Varecia)_")
+plot_clade(geo, tips = lemurs, maps = maps)
+```
+
+### Dispersal distances
+
+`get_dispersal_distance()` measures great-circle distances between parent
+and child nodes for every branch and posterior sample (`type = "branch"`),
+or cumulative root-to-tip distances (`type = "path"`).
+
+```{r}
+bd <- get_dispersal_distance(geo, phy, type = "branch", nodes = "tips")
+bd$rate_km_per_myr <- bd$distance_km / bd$branch_time_myr
+head(bd[, c("tip_label", "iteration", "distance_km", "branch_time_myr",
+            "rate_km_per_myr")])
+```
+
+Posterior median terminal-branch distance per species:
+
+```{r}
+med <- aggregate(distance_km ~ tip_label, data = bd, FUN = median)
+head(med[order(-med$distance_km), ], 5)
+```
+
+Cumulative distance travelled by each lineage against its age:
+
+```{r}
+pd <- get_dispersal_distance(geo, phy, type = "path")
+pd_med <- aggregate(cbind(path_distance_km, lineage_time_myr) ~ tip_label,
+                    data = pd, FUN = median)
+
+library(ggplot2)
+ggplot(pd_med, aes(lineage_time_myr, path_distance_km / 1000)) +
+  geom_point(alpha = 0.5) +
+  labs(x = "Time since the root (Myr)",
+       y = "Root-to-tip distance (1000 km)") +
+  theme_bw()
+```
+
+### Palaeo frame vs plate frame
+
+By default (`frame = "palaeo"`) distances are measured between the
+palaeocoordinates as sampled, following O'Donovan et al. (2018) and
+Avaria-Llautureo et al. (2025). These include the movement of the plates
+that carried each lineage. With `frame = "plate"`, each node's samples are
+first reconstructed to their present-day position on their plate, which
+removes plate motion. Samples that cannot be reconstructed are kept with
+`NA` distances and counted per node:
+
+```{r, eval = FALSE}
+bd_plate <- get_dispersal_distance(geo, phy, frame = "plate")
+attr(bd_plate, "reconstruction")
+```
+
+## References
+
+Avaria-Llautureo, J., Püschel, T. A., Meade, A., Baker, J., Nicholson, S. L.,
+& Venditti, C. (2025). The radiation and geographic expansion of primates
+through diverse climates. *PNAS*, 122(32), e2423833122.
+<https://doi.org/10.1073/pnas.2423833122>
+
+O'Donovan, C., Meade, A., & Venditti, C. (2018). Dinosaurs reveal the
+geographical signature of an evolutionary radiation. *Nature Ecology &
+Evolution*, 2, 452-458. <https://doi.org/10.1038/s41559-017-0454-6>

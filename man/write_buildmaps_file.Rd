@@ -58,7 +58,9 @@ The output file can be passed directly to BayesTraits with the
 binary file in BayesTraits with \code{LoadMaps BinaryMap.bin}.
 }
 \examples{
-maps <- get_paleomaps(geo)
+\dontrun{
+# Requires an internet connection (GPlates Web Service)
+maps <- get_paleomaps(max_age = 74)
 sf_to_csv(age = maps$ages, maps = maps, dir = "maps_csv")
 
 # Write the BuildMaps file
@@ -72,4 +74,5 @@ write_buildmaps_file(maps,
 # Then in BayesTraits (command line):
 # BuildMaps BuildPrimatesMaps.txt
 # LoadMaps  PrimatesMaps.bin
+}
 }

@@ -49,6 +49,9 @@ NULL (default) = full world map.}
 
 \item{pt_alpha}{Numeric 0-1. Point transparency (default 0.15).}
 
+\item{show_tips}{Logical. Include tip nodes in the plot (default TRUE).
+Set FALSE to show only internal nodes.}
+
 \item{show_median}{Logical. Plot posterior median per node (default TRUE).}
 
 \item{med_size}{Numeric. Median symbol size (default 3).}
@@ -64,8 +67,14 @@ A ggplot2 object.
 Plot posterior node locations for all nodes within a clade
 }
 \examples{
-geo <- read_geo_ancstates("VR.AncStates.txt")
-plot_clade(geo, tips = c("A_ligtu_ligtu_PCM32", "A_ligtu_simsii_OTN173"))
-plot_clade(geo, tips = c("A_ligtu_ligtu_PCM32", "A_ligtu_simsii_OTN173"),
-                  modern_coords = FALSE, maps = maps)
+\dontrun{
+# Requires an internet connection (GPlates Web Service)
+geo <- read_geo_ancstates(system.file("extdata", "Primate.AncStates.txt",
+                                      package = "GeoModelR"))
+lemurs <- find_tips(geo, "^(Lemur|Eulemur|Varecia)_")
+plot_clade(geo, tips = lemurs)
+
+maps <- get_paleomaps(geo)
+plot_clade(geo, tips = lemurs, modern_coords = FALSE, maps = maps)
+}
 }

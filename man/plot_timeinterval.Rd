@@ -67,7 +67,14 @@ A ggplot2 object.
 Plot posterior node locations for all nodes within a time window
 }
 \examples{
-geo <- read_geo_ancstates("VR.AncStates.txt")
+\dontrun{
+# Requires an internet connection (GPlates Web Service)
+geo <- read_geo_ancstates(system.file("extdata", "Primate.AncStates.txt",
+                                      package = "GeoModelR"))
 plot_timeinterval(geo, age_min = 0, age_max = 8)
-plot_timeinterval(geo, age_min = 0, age_max = 8, modern_coords = FALSE, maps = maps)
+
+maps <- get_paleomaps(max_age = 8)
+plot_timeinterval(geo, age_min = 0, age_max = 8,
+                  modern_coords = FALSE, maps = maps)
+}
 }

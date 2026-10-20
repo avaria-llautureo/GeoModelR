@@ -1,5 +1,5 @@
 # =============================================================================
-# GeoModelR — Visualisation Functions
+# GeoModelR - Visualisation Functions
 # Functions to explore BayesTraits Geo model output (*.AncStates.txt files).
 # Run these AFTER your BayesTraits analysis.
 #
@@ -34,10 +34,21 @@
 #' @return A ggplot2 or patchwork object.
 #'
 #' @examples
-#' geo <- read_geo_ancstates("Primate.AncStates.txt")
+#' \dontrun{
+#' # Requires an internet connection (palaeomaps from the GPlates Web Service)
+#' anc_file  <- system.file("extdata", "Primate.AncStates.txt",
+#'                          package = "GeoModelR")
+#' tree_file <- system.file("extdata", "Median.trees", package = "GeoModelR")
+#' phy  <- ape::read.nexus(tree_file)
+#' geo  <- read_geo_ancstates(anc_file, phy = phy)
+#'
 #' plot_node(geo, "Node-00008")
 #' plot_node(geo, "Node-00008", bbox = c(-82, -33, -56, -15))
+#'
+#' # Download the maps once and reuse them; add the tree panel
+#' maps <- get_paleomaps(geo)
 #' plot_node(geo, "Node-00008", phy = phy, maps = maps)
+#' }
 #' @export
 plot_node <- function(geo,
                               node,
@@ -90,7 +101,7 @@ plot_node <- function(geo,
 
   if (show_density) {
     if (!requireNamespace("ggdensity", quietly = TRUE)) {
-      warning("Package 'ggdensity' not installed — density layer skipped.")
+      warning("Package 'ggdensity' not installed - density layer skipped.")
     } else {
       # geom_hdr default behaviour: varying alpha per density level,
       # fill set to pt_col. Simple and reliable.
@@ -160,24 +171,30 @@ plot_node <- function(geo,
 #'                      present day to avoid land/sea mismatch across ages.
 #' @param map_age       Numeric or NULL. Used when modern_coords = FALSE.
 #'                      Palaeomap age in Ma; NULL = midpoint of the window.
-#' @param show_tips     Logical. Include tip nodes? Default TRUE.
+#' @param show_tips     Logical. Include tip nodes in the plot (default TRUE).
+#'                      Set FALSE to show only internal nodes.
 #' @param bbox          Numeric c(lon_min, lon_max, lat_min, lat_max).
 #'                      NULL (default) = full world map.
 #' @param show_points   Logical. Plot full MCMC sample as points (default FALSE).
 #' @param pt_col        Character. Point colour (default "#555555").
 #' @param pt_size       Numeric. Point size (default 0.4).
 #' @param pt_alpha      Numeric 0-1. Point transparency (default 0.15).
-#' @param show_tips     Logical. Include tip nodes in the plot (default TRUE).
-#'                      Set FALSE to show only internal nodes.
 #' @param show_median   Logical. Plot posterior median per node (default TRUE).
 #' @param med_size      Numeric. Median symbol size (default 3).
 #' @param maps          A geo_paleomaps object. Avoids GWS calls.
 #' @return A ggplot2 object.
 #'
 #' @examples
-#' geo <- read_geo_ancstates("VR.AncStates.txt")
+#' \dontrun{
+#' # Requires an internet connection (GPlates Web Service)
+#' geo <- read_geo_ancstates(system.file("extdata", "Primate.AncStates.txt",
+#'                                       package = "GeoModelR"))
 #' plot_timeinterval(geo, age_min = 0, age_max = 8)
-#' plot_timeinterval(geo, age_min = 0, age_max = 8, modern_coords = FALSE, maps = maps)
+#'
+#' maps <- get_paleomaps(max_age = 8)
+#' plot_timeinterval(geo, age_min = 0, age_max = 8,
+#'                   modern_coords = FALSE, maps = maps)
+#' }
 #' @export
 plot_timeinterval <- function(geo,
                                  age_min       = 0,
@@ -303,6 +320,8 @@ plot_timeinterval <- function(geo,
 #' @param pt_col        Character. Point colour (default "#555555").
 #' @param pt_size       Numeric. Point size (default 0.4).
 #' @param pt_alpha      Numeric 0-1. Point transparency (default 0.15).
+#' @param show_tips     Logical. Include tip nodes in the plot (default TRUE).
+#'                      Set FALSE to show only internal nodes.
 #' @param show_median   Logical. Plot posterior median per node (default TRUE).
 #' @param med_size      Numeric. Median symbol size (default 3).
 #' @param label_nodes   Logical. Add node name labels (default FALSE).
@@ -310,10 +329,16 @@ plot_timeinterval <- function(geo,
 #' @return A ggplot2 object.
 #'
 #' @examples
-#' geo <- read_geo_ancstates("VR.AncStates.txt")
-#' plot_clade(geo, tips = c("A_ligtu_ligtu_PCM32", "A_ligtu_simsii_OTN173"))
-#' plot_clade(geo, tips = c("A_ligtu_ligtu_PCM32", "A_ligtu_simsii_OTN173"),
-#'                   modern_coords = FALSE, maps = maps)
+#' \dontrun{
+#' # Requires an internet connection (GPlates Web Service)
+#' geo <- read_geo_ancstates(system.file("extdata", "Primate.AncStates.txt",
+#'                                       package = "GeoModelR"))
+#' lemurs <- find_tips(geo, "^(Lemur|Eulemur|Varecia)_")
+#' plot_clade(geo, tips = lemurs)
+#'
+#' maps <- get_paleomaps(geo)
+#' plot_clade(geo, tips = lemurs, modern_coords = FALSE, maps = maps)
+#' }
 #' @export
 plot_clade <- function(geo,
                                tips,
@@ -337,7 +362,7 @@ plot_clade <- function(geo,
 
   # A node belongs to the clade if ALL of its taxa are within the set of
   # clade-defining tips (subset condition). The previous condition
-  # all(tips %in% tl) was inverted — it found nodes that CONTAIN all tips,
+  # all(tips %in% tl) was inverted - it found nodes that CONTAIN all tips,
   # which includes every ancestor up to the root of the whole tree.
   clade_mask  <- sapply(geo$nodes$taxa, function(tl) {
     length(tl) > 0 && all(tl %in% tips)

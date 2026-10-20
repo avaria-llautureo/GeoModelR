@@ -1,5 +1,5 @@
 # =============================================================================
-# GeoModelR — Internal helpers
+# GeoModelR - Internal helpers
 # These functions are used internally by prepare_maps.R and visualise.R.
 # They are not exported to the user.
 # =============================================================================
@@ -9,7 +9,7 @@
 # Internal helpers
 # =============================================================================
 
-# Palaeomap session cache — avoids repeated GWS requests for the same age
+# Palaeomap session cache - avoids repeated GWS requests for the same age
 .map_cache <- new.env(parent = emptyenv())
 
 # Look up one age from a geo_paleomaps object, or fetch from GWS if maps = NULL
@@ -32,7 +32,7 @@
     return(maps$coastlines[[key]])
   }
 
-  # No maps object — fetch directly from GWS
+  # No maps object - fetch directly from GWS
   if (!requireNamespace("rgplates", quietly = TRUE))
     stop("Package 'rgplates' is required. Install with: install.packages('rgplates')")
   rgplates::reconstruct(feature, age = age_int, model = model)
@@ -47,7 +47,7 @@
 #   - An ape node number integer:     62  (requires ape_node column)
 #
 # Both paths resolve to a BayesTraits node_name first, then filter $coords
-# by that name — ensuring both inputs produce identical results.
+# by that name - ensuring both inputs produce identical results.
 .get_node_coords <- function(geo, node, burnin = 0.1) {
 
   if (is.numeric(node) || is.integer(node)) {
@@ -148,7 +148,7 @@
   if (length(prefixes) == 1) prefixes else paste(prefixes[1], "et al.")
 }
 
-# Reconstruct palaeocoords to present (internal — see reconstruct_coords_to_present)
+# Reconstruct palaeocoords to present (internal - see reconstruct_coords_to_present)
 .reconstruct_to_present <- function(coords, model = "PALEOMAP") {
 
   if (!requireNamespace("rgplates", quietly = TRUE))
@@ -263,11 +263,17 @@
 }
 
 # =============================================================================
-# Utilities — exported helper functions for both workflows
+# Utilities - exported helper functions for both workflows
 # =============================================================================
 
 #' List all unique node ages (rounded to integer Ma)
 #' @param geo A geo_ancstates object.
+#' @return Sorted integer-valued numeric vector of node ages (Ma).
+#' @examples
+#' geo <- read_geo_ancstates(system.file("extdata", "Primate.AncStates.txt",
+#'                                       package = "GeoModelR"),
+#'                           verbose = FALSE)
+#' get_node_ages(geo)
 #' @export
 get_node_ages <- function(geo) sort(unique(round(geo$nodes$height)))
 
@@ -275,6 +281,12 @@ get_node_ages <- function(geo) sort(unique(round(geo$nodes$height)))
 #' @param geo     A geo_ancstates object.
 #' @param pattern Character. Regex or fixed string.
 #' @param fixed   Logical. Fixed string match? (default FALSE).
+#' @return Character vector of matching tip names.
+#' @examples
+#' geo <- read_geo_ancstates(system.file("extdata", "Primate.AncStates.txt",
+#'                                       package = "GeoModelR"),
+#'                           verbose = FALSE)
+#' find_tips(geo, "^Eulemur_")
 #' @export
 find_tips <- function(geo, pattern, fixed = FALSE) {
   tip_taxa <- unlist(lapply(seq_len(nrow(geo$nodes)), function(i) {
@@ -284,6 +296,7 @@ find_tips <- function(geo, pattern, fixed = FALSE) {
 }
 
 #' Clear the in-session palaeomap cache
+#' @return Nothing; called for its side effect.
 #' @export
 clear_map_cache <- function() {
   rm(list = ls(envir = .map_cache), envir = .map_cache)
@@ -291,5 +304,6 @@ clear_map_cache <- function() {
 }
 
 #' List palaeomaps currently held in the session cache
+#' @return Character vector of cache keys.
 #' @export
 list_cached_maps <- function() ls(.map_cache)

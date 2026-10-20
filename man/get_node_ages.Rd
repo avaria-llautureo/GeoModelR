@@ -9,6 +9,15 @@ get_node_ages(geo)
 \arguments{
 \item{geo}{A geo_ancstates object.}
 }
+\value{
+Sorted integer-valued numeric vector of node ages (Ma).
+}
 \description{
 List all unique node ages (rounded to integer Ma)
+}
+\examples{
+geo <- read_geo_ancstates(system.file("extdata", "Primate.AncStates.txt",
+                                      package = "GeoModelR"),
+                          verbose = FALSE)
+get_node_ages(geo)
 }

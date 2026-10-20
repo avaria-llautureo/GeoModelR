@@ -35,7 +35,12 @@ exports raw polygon vertices instead, which may be useful for custom
 processing or visualisation.
 }
 \examples{
+\dontrun{
+# Requires an internet connection (GPlates Web Service)
+geo  <- read_geo_ancstates(system.file("extdata", "Primate.AncStates.txt",
+                                       package = "GeoModelR"))
 maps <- get_paleomaps(geo)
-export_restriction_maps(maps)
-export_restriction_maps(maps, ages = get_node_ages(geo))
+export_restriction_maps(maps, dir = tempdir())
+export_restriction_maps(maps, dir = tempdir(), ages = get_node_ages(geo))
+}
 }

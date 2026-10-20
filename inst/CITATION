@@ -1,0 +1,36 @@
+bibentry(
+  bibtype  = "Article",
+  header   = "To cite the Geo model with palaeomap restrictions, please use:",
+  title    = "The radiation and geographic expansion of primates through diverse climates",
+  author   = c(person("Jorge", "Avaria-Llautureo"),
+               person(c("Thomas", "A."), "Püschel"),
+               person("Andrew", "Meade"),
+               person("Joanna", "Baker"),
+               person(c("Stephen", "L."), "Nicholson"),
+               person("Chris", "Venditti")),
+  journal  = "Proceedings of the National Academy of Sciences",
+  year     = "2025",
+  volume   = "122",
+  number   = "32",
+  pages    = "e2423833122",
+  doi      = "10.1073/pnas.2423833122",
+  textVersion = paste(
+    "Avaria-Llautureo, J., Puschel, T. A., Meade, A., Baker, J., Nicholson, S. L.,",
+    "& Venditti, C. (2025). The radiation and geographic expansion of primates",
+    "through diverse climates. Proceedings of the National Academy of Sciences,",
+    "122(32), e2423833122. https://doi.org/10.1073/pnas.2423833122")
+)
+
+bibentry(
+  bibtype  = "Manual",
+  header   = "To cite the GeoModelR package, please use:",
+  title    = "GeoModelR: Tools for Phylogenetic Geographic Modelling and Biogeographic Analysis",
+  author   = person("Jorge", "Avaria-Llautureo"),
+  year     = "2026",
+  note     = paste("R package version", meta$Version),
+  url      = "https://github.com/avaria-llautureo/GeoModelR",
+  textVersion = paste0(
+    "Avaria-Llautureo, J. (2026). GeoModelR: Tools for Phylogenetic ",
+    "Geographic Modelling and Biogeographic Analysis. R package version ",
+    meta$Version, ". https://github.com/avaria-llautureo/GeoModelR")
+)

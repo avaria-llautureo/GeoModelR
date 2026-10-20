@@ -13,6 +13,15 @@ find_tips(geo, pattern, fixed = FALSE)
 
 \item{fixed}{Logical. Fixed string match? (default FALSE).}
 }
+\value{
+Character vector of matching tip names.
+}
 \description{
 Find tip taxon names matching a pattern
+}
+\examples{
+geo <- read_geo_ancstates(system.file("extdata", "Primate.AncStates.txt",
+                                      package = "GeoModelR"),
+                          verbose = FALSE)
+find_tips(geo, "^Eulemur_")
 }
