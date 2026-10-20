@@ -19,8 +19,7 @@ The current package version covers three workflows.
 
 | Function | Description |
 |---|---|
-| `clean_sister_geodata()` | Find sister taxa with overlapping coordinates (< 50 m by default) and remove overlapping distribution points, 
-to avoid zero-length scaled branches under the variable-rates model |
+| `clean_sister_geodata()` | Find sister taxa with overlapping coordinates (< 50 m by default) and remove overlapping distribution points to avoid zero-length scaled branches under the variable-rates model |
 
 ### 2. Palaeomap preparation *(before BayesTraits)*
 
