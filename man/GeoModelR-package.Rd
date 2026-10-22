@@ -4,7 +4,7 @@
 \name{GeoModelR-package}
 \alias{GeoModelR}
 \alias{GeoModelR-package}
-\title{GeoModelR: tools for the BayesTraits Geo model}
+\title{GeoModelR: Bayesian Models of Continuous Biogeography and Evolution}
 \description{
 Prepare palaeomaps and geographic input data for the Geo model in
 BayesTraits v5+, and explore its output: ancestral locations on
@@ -16,6 +16,7 @@ Main functions, by workflow:
 \item Input data: \code{\link{clean_sister_geodata}()}.
 \item Palaeomaps: \code{\link{get_paleomaps}()},
 \code{\link{fill_missing_maps}()}, \code{\link{sf_to_csv}()},
+\code{\link{export_restriction_maps}()},
 \code{\link{write_buildmaps_file}()}.
 \item Output: \code{\link{read_geo_ancstates}()},
 \code{\link{add_ape_nodes}()}, \code{\link{plot_node}()},
@@ -42,11 +43,6 @@ Useful links:
 Authors:
 \itemize{
   \item Jorge Avaria-Llautureo \email{j.l.avaria@reading.ac.uk} (\href{https://orcid.org/0000-0002-8610-7428}{ORCID})
-}
-
-Other contributors:
-\itemize{
-  \item Andrew Meade (Co-author of clean_sister_geodata()) [contributor]
 }
 
 }

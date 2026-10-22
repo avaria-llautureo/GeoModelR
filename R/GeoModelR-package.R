@@ -1,4 +1,4 @@
-#' GeoModelR: tools for the BayesTraits Geo model
+#' GeoModelR: Bayesian Models of Continuous Biogeography and Evolution
 #'
 #' Prepare palaeomaps and geographic input data for the Geo model in
 #' BayesTraits v5+, and explore its output: ancestral locations on
@@ -9,6 +9,7 @@
 #'   \item Input data: \code{\link{clean_sister_geodata}()}.
 #'   \item Palaeomaps: \code{\link{get_paleomaps}()},
 #'         \code{\link{fill_missing_maps}()}, \code{\link{sf_to_csv}()},
+#'         \code{\link{export_restriction_maps}()},
 #'         \code{\link{write_buildmaps_file}()}.
 #'   \item Output: \code{\link{read_geo_ancstates}()},
 #'         \code{\link{add_ape_nodes}()}, \code{\link{plot_node}()},

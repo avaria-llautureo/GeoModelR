@@ -2,7 +2,7 @@
 
 ## New features
 
-* `clean_sister_geodata()` (with Andrew Meade) checks BayesTraits Geo model
+* `clean_sister_geodata()` checks BayesTraits Geo model
   input coordinates for sister taxa closer than `distance_threshold`
   (default 50 m), which can compress branches to zero length under the
   variable-rates model.
@@ -52,7 +52,8 @@
   documentation fixed in `plot_timeinterval()` and `plot_clade()`.
 * testthat test suite and GitHub Actions `R-CMD-check` workflow added.
 * `inst/CITATION` added (`citation("GeoModelR")`).
-* Andrew Meade added as contributor.
+* New Title and Description in `DESCRIPTION`.
+* The package help page now also lists `export_restriction_maps()`.
 
 # GeoModelR 0.2.0
 

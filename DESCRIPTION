@@ -1,26 +1,25 @@
 Package: GeoModelR
-Title: Tools for Phylogenetic Geographic Modelling and Biogeographic Analysis
+Title: Bayesian Models of Continuous Biogeography and Evolution
 Version: 0.3.0
 Authors@R: c(
     person("Jorge", "Avaria-Llautureo",
            email = "j.l.avaria@reading.ac.uk",
            role = c("aut", "cre"),
-           comment = c(ORCID = "0000-0002-8610-7428")),
-    person("Andrew", "Meade", role = "ctb",
-           comment = "Co-author of clean_sister_geodata()")
+           comment = c(ORCID = "0000-0002-8610-7428"))
     )
-Description: Tools for the Geographical (Geo) model implemented in
-    'BayesTraits' v5+, which reconstructs ancestral geographic locations
-    on a phylogeny, optionally restricted to land or sea on palaeomaps.
-    Covers three workflows: (1) input data checks, removing overlapping
-    coordinates of sister taxa that can compress branches to zero length;
-    (2) palaeomap preparation, downloading palaeocoastlines from the
-    'GPlates' Web Service and writing land/ocean grids and 'BuildMaps'
-    files for 'BayesTraits'; and (3) output exploration, reading
-    'AncStates' files, plotting posterior ancestral locations on
-    age-matched palaeomaps, and computing posterior dispersal distances in
-    the palaeo or plate reference frame. Described in Avaria-Llautureo et
-    al. (2025) <doi:10.1073/pnas.2423833122>.
+Description: Tools for continuous biogeography and evolution, built around
+    Bayesian models of species movement. The current version supports the
+    Geographical (Geo) model in 'BayesTraits' v5+, which reconstructs
+    ancestral geographic locations on a phylogeny, optionally restricted to
+    land or sea on palaeomaps. It covers three workflows: (1) input data
+    checks, removing overlapping coordinates of sister taxa that can
+    compress branches to zero length; (2) palaeomap preparation, downloading
+    palaeocoastlines from the 'GPlates' Web Service and writing land/ocean
+    grids and 'BuildMaps' files for 'BayesTraits'; and (3) output
+    exploration, reading 'AncStates' files, plotting posterior ancestral
+    locations on age-matched palaeomaps, and computing posterior dispersal
+    distances in the palaeo or plate reference frame. Described in
+    Avaria-Llautureo et al. (2025) <doi:10.1073/pnas.2423833122>.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
