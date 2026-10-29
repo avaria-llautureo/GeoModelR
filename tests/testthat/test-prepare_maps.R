@@ -52,15 +52,38 @@ test_that("get_paleomaps() keeps a NULL slot for failed ages", {
   expect_false(is.null(maps2$coastlines[["1"]]))
 })
 
-test_that("sf_to_csv() rasterises a maps object to a binary grid", {
-  df <- sf_to_csv(age = 0, maps = fake_maps(0), resolution = 5, verbose = FALSE)
+test_that("paleomap_to_csv() rasterises GPlates maps to a binary grid", {
+  # fake_maps() has no 'type' field, like objects made before 0.3.1
+  df <- paleomap_to_csv(age = 0, maps = fake_maps(0), resolution = 5,
+                        verbose = FALSE)
   expect_named(df, c("Lon", "Lat", "mask"))
   expect_setequal(unique(df$mask), c(0L, 1L))
   expect_equal(df$mask[df$Lon == 2.5 & df$Lat == 2.5], 1L)
   expect_equal(df$mask[df$Lon == 102.5 & df$Lat == 42.5], 0L)
 
+  # default resolution for GPlates is 1 degree
+  df1 <- paleomap_to_csv(age = 0, maps = fake_maps(0), verbose = FALSE)
+  expect_equal(nrow(df1), 360 * 180)
+
   d <- file.path(tempdir(), "masks")
-  sf_to_csv(age = 0:1, maps = fake_maps(0:1), resolution = 10, dir = d,
-            verbose = FALSE)
+  paleomap_to_csv(age = 0:1, maps = fake_maps(0:1), resolution = 10, dir = d,
+                  verbose = FALSE)
   expect_true(all(file.exists(file.path(d, c("mask_0.csv", "mask_1.csv")))))
+
+  expect_error(paleomap_to_csv(0, maps = fake_maps(0), resolution = -1),
+               "positive")
+  expect_error(paleomap_to_csv(0, maps = fake_maps(0), source = "raster",
+                               mask_range = c(0, Inf)), "get_paleomaps")
+  expect_warning(paleomap_to_csv(0, maps = fake_maps(0), resolution = 10,
+                                 mask_range = c(0, 1), verbose = FALSE),
+                 "only used for raster")
+})
+
+test_that("sf_to_csv() is deprecated but keeps its old defaults and output", {
+  expect_warning(df <- sf_to_csv(maps = fake_maps(0), verbose = FALSE),
+                 "deprecated")
+  expect_identical(df, paleomap_to_csv(0, maps = fake_maps(0), verbose = FALSE))
+  expect_equal(nrow(df), 360 * 180)           # age = 0, resolution = 1
+  expect_error(suppressWarnings(sf_to_csv(maps = fake_maps(0), resolution = 0)),
+               "positive")
 })

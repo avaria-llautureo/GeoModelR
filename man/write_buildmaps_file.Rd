@@ -12,18 +12,20 @@ write_buildmaps_file(
   lat_boxes = 150L,
   out_file = "BuildMaps.txt",
   ages = NULL,
+  max_age = NULL,
   verbose = TRUE
 )
 }
 \arguments{
-\item{maps}{A \code{geo_paleomaps} object from \code{get_paleomaps()}.
-Used to determine the set of available ages.}
+\item{maps}{A \code{geo_paleomaps} object from \code{get_paleomaps()}
+or \code{load_raster_maps()}. Used to determine the set of
+available ages.}
 
 \item{bin_file}{Character. Name of the binary map file that BayesTraits
 will create (default \code{"BinaryMap.bin"}).}
 
 \item{prefix}{Character. CSV file name prefix (default \code{"mask_"}).
-Must match the prefix used in \code{sf_to_csv()}.}
+Must match the prefix used in \code{paleomap_to_csv()}.}
 
 \item{lon_boxes}{Integer. Number of longitude grid boxes for BayesTraits
 spatial indexing (default 250, as recommended in the manual).}
@@ -32,8 +34,14 @@ spatial indexing (default 250, as recommended in the manual).}
 
 \item{out_file}{Character. Output file path (default \code{"BuildMaps.txt"}).}
 
-\item{ages}{Integer vector or NULL. Subset of ages to include.
-NULL (default) uses all ages in the maps object.}
+\item{ages}{Numeric vector or \code{NULL}. Subset of ages to include.
+\code{NULL} (default) uses all ages in the maps object.}
+
+\item{max_age}{Numeric or \code{NULL}. Oldest age (Ma) that must be
+covered, e.g. the root age of the tree. When set, the
+last map covers up to \code{ceiling(max_age) + 0.5} Ma.
+Must not be younger than the oldest map. \code{NULL}
+(default) keeps the last map's end at its age + 0.5 Ma.}
 
 \item{verbose}{Logical. Print a summary on completion (default TRUE).}
 }
@@ -43,7 +51,9 @@ Invisibly returns the output file path.
 \description{
 Creates the text file required by the BayesTraits \code{BuildMaps} command
 to compile individual CSV map files into a binary map file. Each CSV map
-is assigned a time interval following the convention used in BayesTraits:
+is assigned the time interval closest to its age, using midpoints between
+neighbouring maps, so every point in time is covered by exactly one map.
+With maps every 1 Ma:
 }
 \details{
 \itemize{
@@ -53,6 +63,16 @@ is assigned a time interval following the convention used in BayesTraits:
 \item \code{mask_MAX.csv} covers \code{[MAX-0.5, MAX+0.5)} Ma
 }
 
+Irregular spacing works the same way (e.g. Scotese maps every 5 Ma:
+\code{mask_5.csv} covers \code{[2.5, 7.5)} Ma).
+
+By default the last map ends 0.5 Ma after its age. Set \code{max_age}
+(e.g. the root age of the tree) to extend the last map so every node gets
+a restriction map. This is needed when the oldest map is younger than the
+root, and in particular for a single present-day map used as a
+time-invariant restriction (\code{get_paleomaps(ages = 0)} or
+\code{load_raster_maps(file = )}).
+
 The output file can be passed directly to BayesTraits with the
 \code{BuildMaps} command. After \code{BuildMaps} has run, load the resulting
 binary file in BayesTraits with \code{LoadMaps BinaryMap.bin}.
@@ -61,7 +81,7 @@ binary file in BayesTraits with \code{LoadMaps BinaryMap.bin}.
 \dontrun{
 # Requires an internet connection (GPlates Web Service)
 maps <- get_paleomaps(max_age = 74)
-sf_to_csv(age = maps$ages, maps = maps, dir = "maps_csv")
+paleomap_to_csv(age = maps$ages, maps = maps, dir = "maps_csv")
 
 # Write the BuildMaps file
 write_buildmaps_file(maps)
@@ -70,6 +90,11 @@ write_buildmaps_file(maps)
 write_buildmaps_file(maps,
                      bin_file = "PrimatesMaps.bin",
                      out_file = "BuildPrimatesMaps.txt")
+
+# One present-day map for the whole tree (time-invariant restriction)
+present <- get_paleomaps(ages = 0)
+paleomap_to_csv(age = 0, maps = present, write = TRUE, dir = "maps_csv")
+write_buildmaps_file(present, max_age = 1.2)   # root age of the tree
 
 # Then in BayesTraits (command line):
 # BuildMaps BuildPrimatesMaps.txt

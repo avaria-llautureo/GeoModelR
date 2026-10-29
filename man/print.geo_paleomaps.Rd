@@ -7,7 +7,8 @@
 \method{print}{geo_paleomaps}(x, ...)
 }
 \arguments{
-\item{x}{A \code{geo_paleomaps} object from \code{get_paleomaps()}.}
+\item{x}{A \code{geo_paleomaps} object from \code{get_paleomaps()} or
+\code{load_raster_maps()}.}
 
 \item{...}{Unused.}
 }

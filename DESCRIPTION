@@ -1,6 +1,6 @@
 Package: GeoModelR
 Title: Bayesian Models of Continuous Biogeography and Evolution
-Version: 0.3.0
+Version: 0.3.1
 Authors@R: c(
     person("Jorge", "Avaria-Llautureo",
            email = "j.l.avaria@reading.ac.uk",
@@ -13,9 +13,11 @@ Description: Tools for continuous biogeography and evolution, built around
     ancestral geographic locations on a phylogeny, optionally restricted to
     land or sea on palaeomaps. It covers three workflows: (1) input data
     checks, removing overlapping coordinates of sister taxa that can
-    compress branches to zero length; (2) palaeomap preparation, downloading
-    palaeocoastlines from the 'GPlates' Web Service and writing land/ocean
-    grids and 'BuildMaps' files for 'BayesTraits'; and (3) output
+    compress branches to zero length; (2) palaeomap preparation, writing
+    1/0 restriction grids and 'BuildMaps' files for 'BayesTraits', either
+    from palaeocoastlines downloaded from the 'GPlates' Web Service or from
+    local raster time series of palaeo-elevation and bathymetry (or another
+    gridded variable) thresholded to a chosen value range; and (3) output
     exploration, reading 'AncStates' files, plotting posterior ancestral
     locations on age-matched palaeomaps, and computing posterior dispersal
     distances in the palaeo or plate reference frame. Described in
@@ -46,4 +48,4 @@ VignetteBuilder: knitr
 Config/testthat/edition: 3
 URL: https://github.com/avaria-llautureo/GeoModelR
 BugReports: https://github.com/avaria-llautureo/GeoModelR/issues
-Config/roxygen2/version: 8.1.0
+Config/roxygen2/version: 8.1.1

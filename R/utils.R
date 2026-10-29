@@ -20,6 +20,9 @@
   if (!is.null(maps)) {
     if (!inherits(maps, "geo_paleomaps"))
       stop("'maps' must be a geo_paleomaps object from get_paleomaps().")
+    if (identical(maps$type, "raster"))
+      stop("Plotting needs coastline maps from get_paleomaps(); maps from ",
+           "load_raster_maps() can only be used to prepare BayesTraits maps.")
     key <- as.character(age_int)
     if (!key %in% names(maps$coastlines))
       stop(sprintf(

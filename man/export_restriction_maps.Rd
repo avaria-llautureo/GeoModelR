@@ -2,37 +2,55 @@
 % Please edit documentation in R/prepare_maps.R
 \name{export_restriction_maps}
 \alias{export_restriction_maps}
-\title{Export palaeomaps as restriction map CSVs for BayesTraits}
+\title{Export palaeomap restriction boundaries as CSVs}
 \usage{
 export_restriction_maps(
   maps,
   dir = "restriction_maps",
   ages = NULL,
+  mask_range = NULL,
+  invert = FALSE,
   verbose = TRUE
 )
 }
 \arguments{
-\item{maps}{A \code{geo_paleomaps} object from \code{get_paleomaps()}.}
+\item{maps}{A \code{geo_paleomaps} object from \code{get_paleomaps()}
+or \code{load_raster_maps()}.}
 
-\item{dir}{Output directory. Default \code{"restriction_maps"}.}
+\item{dir}{Output folder. Default \code{"restriction_maps"}.}
 
-\item{ages}{Integer vector or NULL. Subset of ages. NULL = all ages.}
+\item{ages}{Numeric vector or \code{NULL}. Subset of ages.
+\code{NULL} = all ages.}
 
-\item{verbose}{Logical. Print progress (default TRUE).}
+\item{mask_range}{Raster maps only, and required for them. See
+\code{paleomap_to_csv()}.}
+
+\item{invert}{Raster maps only. See \code{paleomap_to_csv()}.}
+
+\item{verbose}{Logical. Print progress (default \code{TRUE}).}
 }
 \value{
-Invisibly returns the output directory path.
+The output folder path, invisibly.
 }
 \description{
-Writes one CSV file per age containing coastline polygon vertex coordinates
-in the BayesTraits restriction map format. Each file is named
-\code{mask_N.csv} where N is the age in Ma.
+Writes one CSV file per age with the coordinates of the restriction
+boundary, rather than the rasterised grid. Each file is named
+\code{mask_N.csv}, where N is the age in Ma. The output depends on the
+source of \code{maps}:
+\itemize{
+\item GPlates maps (\code{get_paleomaps()}): the coastline polygon
+vertex coordinates.
+\item Raster maps (\code{load_raster_maps()}): the \code{mask_range}
+boundary traced as a contour line (e.g. the shoreline, or the
+edge of an elevation or depth band), at the raster's native
+resolution, and its vertex coordinates.
+}
 }
 \details{
-Note: \code{sf_to_csv()} produces rasterised binary grids (Lon/Lat/mask),
-which is the format required by BayesTraits \code{BuildMaps}. This function
-exports raw polygon vertices instead, which may be useful for custom
-processing or visualisation.
+Note: \code{paleomap_to_csv()} produces rasterised binary grids
+(Lon/Lat/mask), which is the format required by BayesTraits
+\code{BuildMaps}. This function exports the boundary geometry instead,
+which may be useful for custom processing or visualisation.
 }
 \examples{
 \dontrun{
@@ -42,5 +60,11 @@ geo  <- read_geo_ancstates(system.file("extdata", "Primate.AncStates.txt",
 maps <- get_paleomaps(geo)
 export_restriction_maps(maps, dir = tempdir())
 export_restriction_maps(maps, dir = tempdir(), ages = get_node_ages(geo))
+
+# Raster maps: traced shoreline (raster files must be downloaded first)
+scotese <- load_raster_maps(dir = "scotese_nc/",
+                            age_regex = "_([0-9]+)Ma\\\\.nc$",
+                            values_var = "z")
+export_restriction_maps(scotese, dir = tempdir(), mask_range = c(0, Inf))
 }
 }

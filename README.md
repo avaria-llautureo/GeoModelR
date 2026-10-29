@@ -27,9 +27,13 @@ The current package version covers three workflows.
 |---|---|
 | `get_paleomaps()` | Download all palaeomaps (using rgplates::reconstruct()) for a tree's age range |
 | `fill_missing_maps()` | Re-download any ages that failed |
-| `sf_to_csv()` | Convert palaeomaps to binary land/ocean CSV grids |
-| `export_restriction_maps()` | Write raw polygon CSVs |
+| `load_raster_maps()` | Register local raster maps: a time series (e.g. palaeo-elevation and bathymetry from the Scotese PaleoDEMs), or one present-day map |
+| `fetch_etopo2022()` | Download and cache the ETOPO 2022 present-day elevation and bathymetry model |
+| `paleomap_to_csv()` | Convert palaeomaps (GPlates or raster) to binary 1/0 CSV grids; for rasters, 1 = cells inside a chosen value range |
+| `export_restriction_maps()` | Write restriction boundaries as CSVs (polygon vertices, or traced contours for rasters) |
 | `write_buildmaps_file()` | Write the BayesTraits `BuildMaps` input file |
+
+`sf_to_csv()` is deprecated: use `paleomap_to_csv()`.
 
 ### 3. Output exploration *(after BayesTraits)*
 
@@ -97,11 +101,35 @@ maps <- get_paleomaps(max_age = ceiling(max(ape::node.depth.edgelength(phy))))
 maps <- fill_missing_maps(maps)
 
 # Inspect one map before writing them all
-df <- sf_to_csv(age = 50, maps = maps, resolution = 2)
+df <- paleomap_to_csv(age = 50, maps = maps, resolution = 2)
 
-sf_to_csv(age = maps$ages, maps = maps, resolution = 1, dir = "maps_csv")
+paleomap_to_csv(age = maps$ages, maps = maps, resolution = 1, dir = "maps_csv")
 write_buildmaps_file(maps)
 # Then follow the BayesTraits manual: BuildMaps / LoadMaps
+```
+
+Restrictions can also be built from local raster maps of palaeo-elevation and
+bathymetry (or any other gridded variable). Cells inside `mask_range` become 1,
+so the restriction can be land, ocean, or a band such as the continental shelf.
+The raster files are not part of the package; download them first.
+
+```r
+scotese <- load_raster_maps(dir = "scotese_nc/", age_regex = "_([0-9]+)Ma\\.nc$",
+                            values_var = "z",
+                            age0_override = fetch_etopo2022())  # real present day
+
+# Check one age, then write all ages (shelf band: -200 to 0 m)
+df <- paleomap_to_csv(age = 100, maps = scotese, source = "raster",
+                      mask_range = c(-200, 0), resolution = 1)
+paleomap_to_csv(age = scotese$ages, maps = scotese, source = "raster",
+                mask_range = c(-200, 0), resolution = 1, dir = "maps_csv")
+write_buildmaps_file(scotese, max_age = 120)   # max_age: root age of the tree
+
+# One present-day map for the whole tree (e.g. a very young clade)
+present <- load_raster_maps(file = fetch_etopo2022())
+paleomap_to_csv(age = 0, maps = present, source = "raster",
+                mask_range = c(0, Inf), resolution = 0.5, write = TRUE)
+write_buildmaps_file(present, max_age = 1.2)
 ```
 
 ### Explore Geo model output

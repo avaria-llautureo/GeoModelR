@@ -2,7 +2,7 @@
 % Please edit documentation in R/prepare_maps.R
 \name{sf_to_csv}
 \alias{sf_to_csv}
-\title{Convert palaeomaps to binary land/ocean CSV files for BayesTraits}
+\title{Convert GPlates palaeomaps to binary CSV files (deprecated)}
 \usage{
 sf_to_csv(
   age = 0,
@@ -19,50 +19,40 @@ sf_to_csv(
 \arguments{
 \item{age}{Numeric vector. Age(s) in Ma. Default \code{0}.}
 
-\item{maps}{A \code{geo_paleomaps} object from \code{get_paleomaps()}.
-Recommended for batch use - avoids re-downloading.}
+\item{maps}{A \code{geo_paleomaps} object: from
+\code{get_paleomaps()} for \code{source = "gplates"}
+(optional, recommended for batch use), or from
+\code{load_raster_maps()} for \code{source = "raster"}
+(required).}
 
 \item{model}{Character. rgplates model (default \code{"PALEOMAP"}).
-Ignored when \code{maps} is supplied.}
+Only used for \code{source = "gplates"} when \code{maps}
+is not supplied.}
 
 \item{extent}{Numeric \code{c(xmin, xmax, ymin, ymax)}.
 Default: global \code{c(-180, 180, -90, 90)}.}
 
-\item{resolution}{Numeric. Grid cell size in degrees (default \code{1}).
-Use smaller values for analysis; 1-2 is suitable for testing.}
+\item{resolution}{Numeric. Grid cell size in degrees (default \code{1}).}
 
-\item{dir}{Character. Output directory. Default \code{"maps_csv"}.}
+\item{dir}{Character. Output folder. Default \code{"maps_csv"}.}
 
-\item{write}{Logical. Force file output for a single age (default FALSE).}
+\item{write}{Logical. Write a file even for a single age (default
+\code{FALSE}).}
 
 \item{prefix}{Character. File name prefix (default \code{"mask_"}).}
 
-\item{verbose}{Logical. Print progress (default TRUE).}
+\item{verbose}{Logical. Print progress (default \code{TRUE}).}
 }
 \value{
-Single age + write=FALSE: a data frame (Lon, Lat, mask).
-Otherwise: invisibly returns the output directory path.
+As \code{paleomap_to_csv()}.
 }
 \description{
-Rasterises palaeocoastlines into a binary land (1) / ocean (0) grid and
-writes CSV files in the format required by the BayesTraits \code{BuildMaps}
-command. For a single age, returns a data frame for inspection. For multiple
-ages, writes one file per age to \code{dir}.
+\code{sf_to_csv()} is deprecated. Use \code{paleomap_to_csv()}, which works
+with both GPlates coastlines and local raster maps. \code{sf_to_csv()}
+keeps its arguments and defaults so existing code still runs; it calls
+\code{paleomap_to_csv(..., source = "gplates")}.
 }
-\examples{
-\dontrun{
-# Requires an internet connection (GPlates Web Service)
-# Inspect one map before committing to full resolution
-df <- sf_to_csv(age = 50)
-library(ggplot2)
-ggplot(df, aes(x = Lon, y = Lat, fill = factor(mask))) +
-  geom_raster() +
-  scale_fill_manual(values = c("0" = "#b8d4e8", "1" = "#d2c8a0"),
-                    labels = c("Ocean", "Land"), name = NULL) +
-  coord_fixed(expand = FALSE) + theme_bw()
-
-# Batch: write all ages from a maps object
-maps <- get_paleomaps(max_age = 74)
-sf_to_csv(age = maps$ages, maps = maps, resolution = 1, dir = "maps_csv")
+\seealso{
+\code{\link{paleomap_to_csv}()}
 }
-}
+\keyword{internal}

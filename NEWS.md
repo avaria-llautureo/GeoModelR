@@ -1,3 +1,41 @@
+# GeoModelR 0.3.1
+
+## New features
+
+* Restriction maps from local raster files. Geo model restrictions can now
+  be built from continuous palaeo-elevation and bathymetry rasters (e.g. the
+  Scotese PaleoDEMs), or any other gridded variable,
+  not only from GPlates coastline polygons.
+  - `load_raster_maps()` registers a folder of raster files, one per age
+    (ages read from file names with `age_regex`; `values_var` names the
+    variable), or one present-day map with `file =`. Only EPSG:4326 rasters
+    are accepted (`check_crs = FALSE` overrides). `age0_override` replaces
+    the series' own 0 Ma map with an observational present-day DEM.
+  - `fetch_etopo2022()` downloads and caches the ETOPO 2022 60 arc-second
+    bedrock relief model for use as a present-day map.
+  - `paleomap_to_csv()` replaces `sf_to_csv()`. With `source = "raster"`,
+    cells inside `mask_range` (one or several ranges, bounds inclusive)
+    become 1 and all others 0; `invert` swaps them. Cells with no value
+    become 0. `resolution` (optional) resamples every map with
+    `resample_method` (`"bilinear"` or `"cubicspline"`); a warning is given
+    for any map finer than 0.5 degrees written at native resolution.
+  - `export_restriction_maps()` traces the `mask_range` boundary as a contour
+    line for raster maps.
+* `write_buildmaps_file()` gains `max_age`, which extends the last map to
+  cover the root, so every node gets a restriction map. This also allows a
+  single present-day map to be used for the whole tree.
+
+## Deprecated
+
+* `sf_to_csv()` is deprecated in favour of `paleomap_to_csv()`. It still
+  works with the same arguments and defaults.
+
+## Other changes
+
+* Plotting functions give a clear error if given maps from
+  `load_raster_maps()`; `fill_missing_maps()` likewise.
+* Description updated to mention raster restriction maps.
+
 # GeoModelR 0.3.0
 
 ## New features

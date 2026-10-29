@@ -28,8 +28,15 @@ the \code{maps} argument.
 Fetches palaeocoastlines from the GPlates Web Service for every integer age
 from 0 Ma to \code{max_age} Ma (1 Ma resolution). All maps are downloaded
 once and stored in a \code{geo_paleomaps} object. Pass this object to
-\code{sf_to_csv()} to generate BayesTraits input files, or to any plotting
-function via the \code{maps} argument to avoid repeated GWS calls.
+\code{paleomap_to_csv()} to generate BayesTraits input files, or to any
+plotting function via the \code{maps} argument to avoid repeated GWS calls.
+}
+\details{
+For a single present-day map (for example a time-invariant restriction for
+a young clade), use \code{ages = 0}.
+
+For palaeomaps from local raster files (palaeo-elevation and bathymetry
+such as the Scotese PaleoDEMs, or any other gridded variable), use \code{load_raster_maps()} instead.
 }
 \examples{
 \dontrun{

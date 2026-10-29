@@ -116,13 +116,35 @@ max_age <- ceiling(max(ape::node.depth.edgelength(phy)))
 maps <- get_paleomaps(max_age = max_age, model = "PALEOMAP")
 maps <- fill_missing_maps(maps)          # retry any ages that failed
 
-sf_to_csv(age = maps$ages, maps = maps, resolution = 1, dir = "maps_csv")
+paleomap_to_csv(age = maps$ages, maps = maps, resolution = 1, dir = "maps_csv")
 write_buildmaps_file(maps, bin_file = "PrimateMaps.bin",
                      out_file = "BuildPrimateMaps.txt")
 ```
 
 Then, in BayesTraits, `BuildMaps BuildPrimateMaps.txt` and
 `LoadMaps PrimateMaps.bin`.
+
+Restrictions can also be built from local raster maps of palaeo-elevation and
+bathymetry, such as the Scotese PaleoDEMs, which you download yourself. `load_raster_maps()` registers the files, and
+`paleomap_to_csv(source = "raster")` turns each map into a 1/0 grid: cells
+whose value falls inside `mask_range` become 1. For example, land is
+`mask_range = c(0, Inf)` and a continental-shelf band is
+`mask_range = c(-200, 0)`:
+
+```{r, eval = FALSE}
+scotese <- load_raster_maps(dir = "scotese_nc/",
+                            age_regex = "_([0-9]+)Ma\\.nc$",
+                            values_var = "z")
+paleomap_to_csv(age = scotese$ages, maps = scotese, source = "raster",
+                mask_range = c(0, Inf), resolution = 1, dir = "maps_csv")
+write_buildmaps_file(scotese, max_age = max_age)
+```
+
+Scotese maps are every 5 Ma, so each map covers the nearest ages, and
+`max_age` extends the oldest map to the root. For a very young clade, one
+present-day map can be used for the whole tree, e.g.
+`load_raster_maps(file = fetch_etopo2022())` or `get_paleomaps(ages = 0)`,
+with `write_buildmaps_file(maps, max_age = )`.
 
 ## 3. After BayesTraits
 
