@@ -1,3 +1,24 @@
+# GeoModelR 0.3.2
+
+## New features
+
+* `restrict_node_map()` assigns a user map to one internal node, e.g. to
+  restrict a clade's crown node to one palaeocontinent and compare
+  alternative origins. The node is found from its tips (or ape node number)
+  and its age from the tree (height above the most recent tip, as in
+  BayesTraits); non-ultrametric trees are supported. The map can be polygons
+  (`sf` object or file) or a raster (`SpatRaster` or file, thresholded with
+  `mask_range`); `invert` swaps 1 and 0. It is written on the same grid as
+  the series CSVs. The node gets the interval node age +/- `width` (default
+  0.001 Ma), and a warning lists any other node inside that interval.
+* `write_buildmaps_file()` inserts node maps and splits the series map
+  around them, so intervals have no gaps or overlaps; overlapping node maps
+  stop with an error. Times are now written with up to 6 decimals (existing
+  lines are unchanged).
+* `offset` in `write_buildmaps_file()` and `restrict_node_map()`: the age of
+  the youngest tip, for all-extinct clades (BayesTraits measures node ages
+  from the most recent tip). Intervals are shifted into tree time.
+
 # GeoModelR 0.3.1
 
 ## New features

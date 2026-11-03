@@ -1,6 +1,6 @@
 Package: GeoModelR
 Title: Bayesian Models of Continuous Biogeography and Evolution
-Version: 0.3.1
+Version: 0.3.2
 Authors@R: c(
     person("Jorge", "Avaria-Llautureo",
            email = "j.l.avaria@reading.ac.uk",

@@ -146,6 +146,24 @@ present-day map can be used for the whole tree, e.g.
 `load_raster_maps(file = fetch_etopo2022())` or `get_paleomaps(ages = 0)`,
 with `write_buildmaps_file(maps, max_age = )`.
 
+A single node can also be restricted to its own map, for example to test
+alternative origins of a clade. `restrict_node_map()` finds the node from its
+tips, writes your map (polygons or a raster) on the same grid as the series,
+and gives it a narrow interval around the node's age (by default
+$\pm$ 0.001 Ma). It warns if any other node falls inside that interval.
+`write_buildmaps_file()` then splits the series map around it:
+
+```{r, eval = FALSE}
+crown <- c("Homo_sapiens", "Lemur_catta")
+maps_afr <- restrict_node_map(maps, map = "africa_64Ma.shp", label = "AFA_64",
+                              phy = phy, tips = crown, dir = "maps_csv")
+write_buildmaps_file(maps_afr, bin_file = "PrimateMaps_AFA.bin",
+                     out_file = "BuildPrimateMaps_AFA.txt", max_age = max_age)
+```
+
+BayesTraits measures node ages from the most recent tip. If all tips are
+extinct, give the age of the youngest tip as `offset` in both functions.
+
 ## 3. After BayesTraits
 
 ### Read the output

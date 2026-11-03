@@ -13,6 +13,7 @@
 # sf_to_csv()                Deprecated alias for paleomap_to_csv(source = "gplates")
 # export_restriction_maps()  Write restriction boundaries as CSVs (polygon
 #                            vertices for GPlates, traced contours for rasters)
+# restrict_node_map()        Assign a user map to one node (narrow interval)
 # write_buildmaps_file()     Write the BayesTraits BuildMaps input file
 #
 # Dependencies: rgplates, sf, terra
@@ -135,6 +136,13 @@
   }
   rownames(out) <- NULL
   out
+}
+
+# Format times for the BuildMaps file: up to 6 decimals, trailing zeros
+# dropped, at least one decimal (0 -> "0.0", 0.5 -> "0.5", 63.9081 -> "63.9081").
+.fmt_time <- function(x) {
+  out <- sub("0+$", "", sprintf("%.6f", x))
+  sub("\\.$", ".0", out)
 }
 
 # Ages that have usable data in a geo_paleomaps object (either source type).
@@ -634,6 +642,15 @@ print.geo_paleomaps <- function(x, ...) {
   }
   if (length(x$failed) > 0)
     cat("  Failed :", paste(x$failed, collapse = ", "), "Ma\n")
+  nm <- x$node_maps
+  if (!is.null(nm) && nrow(nm) > 0) {
+    cat("  Node maps:\n")
+    for (i in seq_len(nrow(nm)))
+      cat(sprintf("    %s : node %d (%d tips), age %s Ma, interval %s - %s Ma\n",
+                  nm$file[i], nm$node[i], nm$n_tips[i], .fmt_time(nm$age[i]),
+                  .fmt_time(nm$start[i] + nm$offset[i]),
+                  .fmt_time(nm$end[i] + nm$offset[i])))
+  }
   if (raster)
     cat("\nPass to paleomap_to_csv(), export_restriction_maps() or",
         "write_buildmaps_file().\n")
@@ -1103,6 +1120,295 @@ export_restriction_maps <- function(maps,
 }
 
 
+#' Restrict one node to its own map
+#'
+#' Assigns a user map to one internal node of the tree, so that BayesTraits
+#' restricts that node's location with this map instead of the palaeomap
+#' series. For example, the crown node of a clade can be restricted to one
+#' palaeocontinent, and the analysis repeated with each continent to compare
+#' alternative origins (as in Avaria-Llautureo et al. 2025).
+#'
+#' BayesTraits assigns maps to internal nodes by node age only. The node map
+#' therefore gets a very narrow time interval around the node's age (node age
+#' \eqn{\pm} \code{width}), and \code{write_buildmaps_file()} splits the
+#' series map around it, so the intervals still have no gaps or overlaps.
+#'
+#' @section Workflow:
+#' \enumerate{
+#'   \item Write the palaeomap series with \code{paleomap_to_csv()}.
+#'   \item Run \code{restrict_node_map()}. It reads the grid (cell size and
+#'         extent) from the series CSVs in \code{dir}, because BayesTraits
+#'         requires all map files to have identical longitude and latitude
+#'         points.
+#'   \item Run \code{write_buildmaps_file()} with the returned object. Use the
+#'         same \code{offset} in both functions.
+#' }
+#' For alternative hypotheses (e.g. one continent per analysis), make one
+#' object per hypothesis from the same \code{maps} and write one BuildMaps
+#' file (and binary map file) for each.
+#'
+#' @section Node ages:
+#' Node ages are heights above the most recent tip, as in BayesTraits ("Maps
+#' are attached to internal nodes based on their age, with extant taxa
+#' assigned the age of zero"; BayesTraits V5.0.2 manual, Maps section) and in
+#' \code{ape}. Trees may be non-ultrametric (fossil tips). If all tips are
+#' extinct, set \code{offset} to the age (Ma) of the youngest tip, so that the
+#' printed ages are real ages and the intervals match the shifted series in
+#' \code{write_buildmaps_file()}.
+#'
+#' The function prints the node it found (ape node number, number of
+#' descendant tips, age and interval), so you can check it is the intended
+#' node. If any other internal node falls inside the interval, it warns and
+#' lists those nodes: they would also get the node map. Narrow \code{width}
+#' to exclude them, or keep them if they should share the map.
+#'
+#' @section The map:
+#' \itemize{
+#'   \item Vector map: an \code{sf} object, or a file path (\code{.shp},
+#'         \code{.gpkg}, \code{.geojson}, \code{.json}, \code{.kml},
+#'         \code{.gml}). Cells whose centre is inside a polygon become 1, all
+#'         others 0.
+#'   \item Raster map: a \code{terra} \code{SpatRaster}, or any other file
+#'         path. Cells whose value falls inside \code{mask_range} become 1, all
+#'         others 0, as in \code{paleomap_to_csv()}. If its grid differs
+#'         from the series grid, it is first resampled (bilinear) to the
+#'         series grid. A raster that is already 1/0 on the series grid uses
+#'         \code{mask_range = c(1, 1)}; on another grid, resampling gives
+#'         values between 0 and 1 along edges, so use e.g.
+#'         \code{mask_range = c(0.5, 1)}.
+#' }
+#' \code{invert = TRUE} swaps 1 and 0 (e.g. sea instead of land). Cells with
+#' no value become 0. Maps must be in geographic lon/lat coordinates
+#' (EPSG:4326).
+#'
+#' @param maps       A \code{geo_paleomaps} object from \code{get_paleomaps()}
+#'                   or \code{load_raster_maps()}, whose series CSVs are
+#'                   already written in \code{dir}.
+#' @param map        The node map: an \code{sf} object, a \code{SpatRaster},
+#'                   or a file path (see The map section).
+#' @param label      Character. Name of the node map, used in the file name
+#'                   \code{<prefix><label>.csv} (e.g. \code{"AFA_64"} gives
+#'                   \code{mask_AFA_64.csv}). No spaces; must not be a number,
+#'                   so it cannot overwrite a series file.
+#' @param phy        The tree used in BayesTraits (\code{phylo}, branch
+#'                   lengths in Ma).
+#' @param tips       Character vector of tip names; the node is their most
+#'                   recent common ancestor. Supply \code{tips} or
+#'                   \code{node}.
+#' @param node       Integer. The ape node number of the node, instead of
+#'                   \code{tips}.
+#' @param width      Numeric (Ma). Half-width of the node's interval:
+#'                   \code{[age - width, age + width)}. Default 0.001.
+#' @param offset     Numeric (Ma). Age of the youngest tip. Default 0 (an
+#'                   extant tip). See Node ages.
+#' @param mask_range Raster maps only, and required for them. A numeric
+#'                   \code{c(min, max)}, or a list of such vectors; bounds
+#'                   inclusive.
+#' @param invert     Logical. Swap 1 and 0 (default \code{FALSE}).
+#' @param values_var Raster files only. Name of the variable to use when the
+#'                   file has more than one (as in \code{load_raster_maps()}).
+#' @param dir        Folder holding the series CSVs, where the node CSV is
+#'                   also written. Default \code{"maps_csv"}.
+#' @param prefix     Character. File name prefix (default \code{"mask_"}).
+#'                   Must match the prefix used in \code{paleomap_to_csv()}.
+#' @param verbose    Logical. Print the node found (default \code{TRUE}).
+#' @return \code{maps}, with the node restriction added to
+#'         \code{maps$node_maps} (one row per node map: label, file, node,
+#'         number of tips, age, interval start and end in tree time, offset).
+#'
+#' @seealso \code{\link{write_buildmaps_file}()},
+#'   \code{\link{paleomap_to_csv}()}
+#'
+#' @examples
+#' \dontrun{
+#' # Requires an internet connection (GPlates Web Service)
+#' phy  <- ape::read.nexus(system.file("extdata", "Median.trees",
+#'                                     package = "GeoModelR"))
+#' maps <- get_paleomaps(max_age = 76)
+#' paleomap_to_csv(age = maps$ages, maps = maps, dir = "maps_csv")
+#'
+#' # Crown primates restricted to Africa (your own polygon map of Africa
+#' # at about 64 Ma)
+#' crown <- c("Homo_sapiens", "Lemur_catta")
+#' maps_afr <- restrict_node_map(maps, map = "africa_64Ma.shp",
+#'                               label = "AFA_64", phy = phy, tips = crown)
+#' write_buildmaps_file(maps_afr, out_file = "BuildMaps_AFA.txt",
+#'                      bin_file = "Maps_AFA.bin", max_age = 76)
+#' }
+#' @export
+restrict_node_map <- function(maps,
+                              map,
+                              label,
+                              phy,
+                              tips       = NULL,
+                              node       = NULL,
+                              width      = 0.001,
+                              offset     = 0,
+                              mask_range = NULL,
+                              invert     = FALSE,
+                              values_var = NULL,
+                              dir        = "maps_csv",
+                              prefix     = "mask_",
+                              verbose    = TRUE) {
+
+  # ---- checks -------------------------------------------------------------
+  if (!inherits(maps, "geo_paleomaps"))
+    stop("'maps' must be a geo_paleomaps object from get_paleomaps() or ",
+         "load_raster_maps().")
+  if (!is.character(label) || length(label) != 1 || is.na(label) ||
+      !nzchar(label) || grepl("[[:space:]/\\\\]", label))
+    stop("'label' must be a single name without spaces or slashes, e.g. \"AFA_64\".")
+  if (grepl("^[0-9.]+$", label))
+    stop("'label' must not be a number: it could overwrite a series file ",
+         "(e.g. mask_64.csv). Use e.g. \"AFA_64\".")
+  if (!inherits(phy, "phylo"))
+    stop("'phy' must be a single tree of class 'phylo' (for a multiPhylo ",
+         "object, use phy[[1]]).")
+  if (is.null(phy$edge.length))
+    stop("'phy' has no branch lengths.")
+  if (is.null(tips) == is.null(node))
+    stop("Supply either 'tips' or 'node'.")
+  if (!is.numeric(width) || length(width) != 1 || is.na(width) || width < 1e-6)
+    stop("'width' must be a single number of at least 1e-6 (Ma).")
+  if (!is.numeric(offset) || length(offset) != 1 || is.na(offset) || offset < 0)
+    stop("'offset' must be a single non-negative number (Ma).")
+  if (!is.logical(invert) || length(invert) != 1 || is.na(invert))
+    stop("'invert' must be TRUE or FALSE.")
+
+  old <- maps$node_maps
+  if (!is.null(old) && nrow(old) > 0) {
+    if (label %in% old$label)
+      stop(sprintf("A node map labelled '%s' is already in 'maps'.", label))
+    if (!isTRUE(all.equal(old$offset[1], offset)))
+      stop(sprintf("Earlier node maps in 'maps' used offset = %g; use the same offset.",
+                   old$offset[1]))
+  }
+
+  # ---- find the node and its age ------------------------------------------
+  ntip  <- ape::Ntip(phy)
+  nnode <- ape::Nnode(phy)
+  if (!is.null(tips)) {
+    if (!is.character(tips) || length(tips) < 2)
+      stop("'tips' must be a character vector of at least two tip names.")
+    missing <- setdiff(tips, phy$tip.label)
+    if (length(missing) > 0)
+      stop(sprintf("Tip(s) not in 'phy': %s", paste(missing, collapse = ", ")))
+    node <- ape::getMRCA(phy, tips)
+  } else {
+    if (!is.numeric(node) || length(node) != 1 ||
+        !(node %in% (ntip + 1):(ntip + nnode)))
+      stop(sprintf("'node' must be an internal ape node number (%d to %d).",
+                   ntip + 1, ntip + nnode))
+    node <- as.integer(node)
+  }
+
+  depth   <- ape::node.depth.edgelength(phy)
+  heights <- max(depth[seq_len(ntip)]) - depth      # height above youngest tip
+  h       <- heights[node]
+  n_desc  <- length(ape::extract.clade(phy, node)$tip.label)
+
+  # Interval in tree time, rounded as written to the BuildMaps file
+  start <- max(0, round(h - width, 6))
+  end   <- round(h + width, 6)
+  if (!(h >= start && h < end))
+    stop("The node's age does not fall inside its rounded interval; increase 'width'.")
+
+  inner  <- (ntip + 1):(ntip + nnode)
+  others <- inner[inner != node & heights[inner] >= start & heights[inner] < end]
+
+  # ---- the grid of the series CSVs ----------------------------------------
+  series_files <- file.path(dir, sprintf("%s%g.csv", prefix, maps$ages))
+  series_files <- series_files[file.exists(series_files)]
+  if (length(series_files) == 0)
+    stop(sprintf(paste0(
+      "No series CSVs (e.g. %s%g.csv) found in '%s'. Run paleomap_to_csv() ",
+      "with the same 'dir' and 'prefix' first."), prefix, maps$ages[1], dir))
+  grid <- utils::read.csv(series_files[1])
+  if (!all(c("Lon", "Lat") %in% names(grid)))
+    stop(sprintf("'%s' has no Lon/Lat columns.", series_files[1]))
+  grid <- grid[, c("Lon", "Lat")]
+  tmpl <- tryCatch(
+    terra::rast(data.frame(x = grid$Lon, y = grid$Lat, z = 0L),
+                type = "xyz", crs = "EPSG:4326"),
+    error = function(e)
+      stop(sprintf("Could not rebuild a regular grid from '%s' (%s).",
+                   series_files[1], conditionMessage(e)), call. = FALSE))
+  cells <- terra::cellFromXY(tmpl, cbind(grid$Lon, grid$Lat))
+
+  # ---- convert the map to 1/0 on that grid --------------------------------
+  vec_ext <- "\\.(shp|gpkg|geojson|json|kml|gml)$"
+  is_vec  <- inherits(map, c("sf", "sfc")) ||
+             (is.character(map) && grepl(vec_ext, map, ignore.case = TRUE))
+  is_rast <- inherits(map, "SpatRaster") || (is.character(map) && !is_vec)
+  if (is.character(map) && (length(map) != 1 || !file.exists(map)))
+    stop(sprintf("Map file not found: %s", paste(map, collapse = ", ")))
+  if (!is_vec && !is_rast)
+    stop("'map' must be an sf object, a SpatRaster, or a file path.")
+
+  if (is_vec) {
+    if (!is.null(mask_range))
+      warning("'mask_range' is only used for raster maps; ignored.")
+    v <- if (is.character(map)) sf::st_read(map, quiet = TRUE) else sf::st_as_sf(map)
+    if (is.na(sf::st_crs(v)) || !isTRUE(sf::st_is_longlat(v)))
+      stop("The vector map is not in geographic lon/lat coordinates (EPSG:4326). ",
+           "Transform it with sf::st_transform(x, 4326) first.")
+    v <- .clean_coastlines(v)
+    v <- v[sf::st_geometry_type(v) %in% c("POLYGON", "MULTIPOLYGON"), ]
+    if (nrow(v) == 0)
+      stop("The vector map contains no polygons.")
+    class(v) <- c("sf", "data.frame")
+    r    <- terra::rasterize(terra::vect(v), tmpl)
+    mask <- ifelse(is.na(terra::values(r)[cells]), 0L, 1L)
+    if (invert) mask <- 1L - mask
+  } else {
+    mask_range <- .normalize_mask_range(mask_range)
+    r <- if (is.character(map)) .read_raster(map, values_var) else map
+    if (terra::nlyr(r) > 1)
+      stop(sprintf("The raster map has %d layers (%s). Set 'values_var'.",
+                   terra::nlyr(r), paste(names(r), collapse = ", ")))
+    if (!isTRUE(suppressWarnings(terra::is.lonlat(r))))
+      stop("The raster map is not in geographic lon/lat coordinates (EPSG:4326). ",
+           "Reproject it with terra::project(r, 'EPSG:4326') first.")
+    if (!isTRUE(suppressWarnings(terra::compareGeom(r, tmpl, stopOnError = FALSE))))
+      r <- terra::resample(r, tmpl, method = "bilinear")
+    mask <- as.integer(terra::values(.apply_mask_range(r, mask_range, invert))[cells])
+    mask[is.na(mask)] <- 0L
+  }
+
+  file <- sprintf("%s%s.csv", prefix, label)
+  utils::write.csv(data.frame(Lon = grid$Lon, Lat = grid$Lat, mask = mask),
+                   file = file.path(dir, file), row.names = FALSE, quote = FALSE)
+
+  # ---- report and return --------------------------------------------------
+  if (verbose) {
+    message(sprintf(paste0(
+      "[restrict_node_map] Node %d (%s; %d descendant tips), age %s Ma.\n",
+      "  Interval: %s to %s Ma%s\n",
+      "  Map file: %s (%d of %d cells = 1)"),
+      node,
+      if (!is.null(tips)) sprintf("MRCA of %d given tips", length(tips)) else "ape node number",
+      n_desc, .fmt_time(h + offset),
+      .fmt_time(start + offset), .fmt_time(end + offset),
+      if (offset > 0) sprintf(" (tree time %s to %s)", .fmt_time(start), .fmt_time(end)) else "",
+      file.path(dir, file), sum(mask), length(mask)))
+  }
+  if (length(others) > 0)
+    warning(sprintf(paste0(
+      "%d other internal node(s) fall inside the interval and would also get ",
+      "this map: %s. Narrow 'width' to exclude them, or keep them if they ",
+      "should share the map."),
+      length(others),
+      paste(sprintf("node %d (age %s Ma)", others, .fmt_time(heights[others] + offset)),
+            collapse = "; ")), call. = FALSE)
+
+  row <- data.frame(label = label, file = file, node = node, n_tips = n_desc,
+                    age = h + offset, start = start, end = end, offset = offset,
+                    stringsAsFactors = FALSE)
+  maps$node_maps <- if (is.null(old)) row else rbind(old, row)
+  maps
+}
+
+
 #' Write a BayesTraits BuildMaps input file
 #'
 #' Creates the text file required by the BayesTraits \code{BuildMaps} command
@@ -1128,13 +1434,33 @@ export_restriction_maps <- function(maps,
 #' time-invariant restriction (\code{get_paleomaps(ages = 0)} or
 #' \code{load_raster_maps(file = )}).
 #'
+#' Node maps added with \code{restrict_node_map()} are inserted with their
+#' narrow intervals, and the series map covering that time is split around
+#' them (e.g. \code{mask_64.csv} from 63.5 to 63.9081, \code{mask_AFA_64.csv}
+#' from 63.9081 to 63.9101, \code{mask_64.csv} from 63.9101 to 64.5), so the
+#' intervals have no gaps or overlaps, as BayesTraits requires. Times are
+#' written with up to 6 decimals.
+#'
+#' @section Offset (all-extinct clades):
+#' BayesTraits measures node ages from the most recent tip ("Maps are
+#' attached to internal nodes based on their age, with extant taxa assigned
+#' the age of zero ... If you are working with a group of taxa which are all
+#' extinct, such as dinosaurs, you will have to apply an offset to compensate
+#' for this"; BayesTraits V5.0.2 manual, Maps section). If no tip is extant,
+#' set \code{offset} to the age (Ma) of the youngest tip. Every interval is
+#' then shifted by \code{-offset} into tree time, maps entirely younger than
+#' the youngest tip are left out, and the first remaining map starts at 0.
+#' \code{ages} and \code{max_age} stay in real ages (Ma). Use the same
+#' \code{offset} as in \code{restrict_node_map()}.
+#'
 #' The output file can be passed directly to BayesTraits with the
 #' \code{BuildMaps} command. After \code{BuildMaps} has run, load the resulting
 #' binary file in BayesTraits with \code{LoadMaps BinaryMap.bin}.
 #'
 #' @param maps       A \code{geo_paleomaps} object from \code{get_paleomaps()}
-#'                   or \code{load_raster_maps()}. Used to determine the set of
-#'                   available ages.
+#'                   or \code{load_raster_maps()}, optionally with node maps
+#'                   from \code{restrict_node_map()}. Used to determine the
+#'                   set of available ages.
 #' @param bin_file   Character. Name of the binary map file that BayesTraits
 #'                   will create (default \code{"BinaryMap.bin"}).
 #' @param prefix     Character. CSV file name prefix (default \code{"mask_"}).
@@ -1150,6 +1476,8 @@ export_restriction_maps <- function(maps,
 #'                   last map covers up to \code{ceiling(max_age) + 0.5} Ma.
 #'                   Must not be younger than the oldest map. \code{NULL}
 #'                   (default) keeps the last map's end at its age + 0.5 Ma.
+#' @param offset     Numeric (Ma). Age of the youngest tip; default 0 (an
+#'                   extant tip). See the Offset section.
 #' @param verbose    Logical. Print a summary on completion (default TRUE).
 #' @return Invisibly returns the output file path.
 #'
@@ -1172,6 +1500,11 @@ export_restriction_maps <- function(maps,
 #' paleomap_to_csv(age = 0, maps = present, write = TRUE, dir = "maps_csv")
 #' write_buildmaps_file(present, max_age = 1.2)   # root age of the tree
 #'
+#' # All-extinct clade whose youngest tip is 66 Ma old
+#' dino <- get_paleomaps(ages = 66:230)
+#' paleomap_to_csv(age = dino$ages, maps = dino, dir = "maps_dino")
+#' write_buildmaps_file(dino, offset = 66, max_age = 230)
+#'
 #' # Then in BayesTraits (command line):
 #' # BuildMaps BuildPrimatesMaps.txt
 #' # LoadMaps  PrimatesMaps.bin
@@ -1185,6 +1518,7 @@ write_buildmaps_file <- function(maps,
                                  out_file  = "BuildMaps.txt",
                                  ages      = NULL,
                                  max_age   = NULL,
+                                 offset    = 0,
                                  verbose   = TRUE) {
 
   if (!inherits(maps, "geo_paleomaps"))
@@ -1198,6 +1532,16 @@ write_buildmaps_file <- function(maps,
       (!is.numeric(max_age) || length(max_age) != 1 || is.na(max_age) ||
        max_age < 0))
     stop("'max_age' must be a single non-negative number (Ma).")
+  if (!is.numeric(offset) || length(offset) != 1 || is.na(offset) || offset < 0)
+    stop("'offset' must be a single non-negative number (Ma).")
+
+  node_maps <- maps$node_maps
+  if (!is.null(node_maps) && nrow(node_maps) > 0 &&
+      !isTRUE(all.equal(node_maps$offset[1], offset)))
+    stop(sprintf(paste0(
+      "The node maps were made with offset = %g, but offset = %g here. ",
+      "Use the same offset in restrict_node_map() and write_buildmaps_file()."),
+      node_maps$offset[1], offset))
 
   raster   <- identical(.maps_type(maps), "raster")
   use_ages <- if (is.null(ages)) maps$ages
@@ -1239,20 +1583,67 @@ write_buildmaps_file <- function(maps,
   #   end = age[n] + 0.5, or ceiling(max_age) + 0.5 when max_age is set
   last_end   <- if (is.null(max_age)) available[n] + 0.5 else ceiling(max_age) + 0.5
   midpoints  <- (available[-n] + available[-1]) / 2.0
-  start_ages <- c(0.0,       midpoints)
-  end_ages   <- c(midpoints, last_end)
+  tab <- data.frame(file  = sprintf("%s%g.csv", prefix, available),
+                    start = c(0.0, midpoints),
+                    end   = c(midpoints, last_end),
+                    stringsAsFactors = FALSE)
+
+  # Real ages -> tree time (height above the youngest tip)
+  if (offset > 0) {
+    tab$start <- tab$start - offset
+    tab$end   <- tab$end   - offset
+    tab <- tab[tab$end > 0, , drop = FALSE]
+    if (nrow(tab) == 0)
+      stop(sprintf("All maps are younger than offset = %g Ma.", offset))
+    tab$start[1] <- 0
+  }
+  tree_end <- tab$end[nrow(tab)]
+
+  # Node maps: insert their intervals and split the series around them
+  if (!is.null(node_maps) && nrow(node_maps) > 0) {
+    nm <- node_maps[order(node_maps$start), , drop = FALSE]
+    if (nrow(nm) > 1 && any(nm$start[-1] < nm$end[-nrow(nm)]))
+      stop("Node map intervals overlap: ",
+           paste(sprintf("%s [%s, %s)", nm$label, .fmt_time(nm$start + offset),
+                         .fmt_time(nm$end + offset)), collapse = "; "),
+           ". BayesTraits does not allow overlaps.")
+    if (any(nm$end > tree_end))
+      stop(sprintf(paste0(
+        "Node map(s) %s are older than the last map's end (%s Ma). ",
+        "Set 'max_age' to the root age."),
+        paste(nm$label[nm$end > tree_end], collapse = ", "),
+        .fmt_time(tree_end + offset)))
+    for (i in seq_len(nrow(nm))) {
+      s <- nm$start[i]; e <- nm$end[i]
+      before <- tab[tab$start < s, , drop = FALSE]
+      before$end <- pmin(before$end, s)
+      after  <- tab[tab$end > e, , drop = FALSE]
+      after$start <- pmax(after$start, e)
+      tab <- rbind(before, data.frame(file = nm$file[i], start = s, end = e),
+                   after)
+      tab <- tab[tab$end > tab$start, , drop = FALSE]
+    }
+  }
+  tab <- tab[order(tab$start), , drop = FALSE]
 
   header    <- sprintf("%s\t%d\t%d", bin_file, as.integer(lon_boxes), as.integer(lat_boxes))
-  map_lines <- sprintf("%s%g.csv\t%.1f\t%.1f",
-                       prefix, available, start_ages, end_ages)
+  map_lines <- sprintf("%s\t%s\t%s", tab$file, .fmt_time(tab$start),
+                       .fmt_time(tab$end))
 
   writeLines(c(header, map_lines), con = out_file)
 
   if (verbose) {
     message(sprintf("[write_buildmaps_file] Written: %s", normalizePath(out_file)))
     message(sprintf("  Binary output : %s", bin_file))
-    message(sprintf("  Ages included : %d  (%g - %g Ma), covering 0 - %g Ma",
-                    n, min(available), max(available), last_end))
+    message(sprintf("  Ages included : %d  (%g - %g Ma), covering %s - %s Ma%s",
+                    n, min(available), max(available), .fmt_time(offset),
+                    .fmt_time(tree_end + offset),
+                    if (offset > 0) sprintf(" (tree time 0 - %s)", .fmt_time(tree_end))
+                    else ""))
+    if (!is.null(node_maps) && nrow(node_maps) > 0)
+      message(sprintf("  Node maps     : %s",
+                      paste(sprintf("%s (node %d)", node_maps$file, node_maps$node),
+                            collapse = ", ")))
     message(sprintf("  Grid          : %d lon x %d lat boxes",
                     as.integer(lon_boxes), as.integer(lat_boxes)))
     message("\nTo build the binary map file, run in BayesTraits:")

@@ -31,6 +31,7 @@ The current package version covers three workflows.
 | `fetch_etopo2022()` | Download and cache the ETOPO 2022 present-day elevation and bathymetry model |
 | `paleomap_to_csv()` | Convert palaeomaps (GPlates or raster) to binary 1/0 CSV grids; for rasters, 1 = cells inside a chosen value range |
 | `export_restriction_maps()` | Write restriction boundaries as CSVs (polygon vertices, or traced contours for rasters) |
+| `restrict_node_map()` | Restrict one node to its own map (e.g. one palaeocontinent), with a narrow time interval around the node's age |
 | `write_buildmaps_file()` | Write the BayesTraits `BuildMaps` input file |
 
 `sf_to_csv()` is deprecated: use `paleomap_to_csv()`.
@@ -130,6 +131,18 @@ present <- load_raster_maps(file = fetch_etopo2022())
 paleomap_to_csv(age = 0, maps = present, source = "raster",
                 mask_range = c(0, Inf), resolution = 0.5, write = TRUE)
 write_buildmaps_file(present, max_age = 1.2)
+```
+
+A single node can be restricted to its own map, for example the crown node to
+one palaeocontinent (your own polygon or raster map). The node map gets a
+narrow time interval around the node's age, and the series is split around it:
+
+```r
+crown <- c("Homo_sapiens", "Lemur_catta")          # tips defining the node
+maps_afr <- restrict_node_map(maps, map = "africa_64Ma.shp", label = "AFA_64",
+                              phy = phy, tips = crown, dir = "maps_csv")
+write_buildmaps_file(maps_afr, out_file = "BuildMaps_AFA.txt",
+                     bin_file = "Maps_AFA.bin", max_age = 76)
 ```
 
 ### Explore Geo model output

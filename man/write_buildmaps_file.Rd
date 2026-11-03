@@ -13,13 +13,15 @@ write_buildmaps_file(
   out_file = "BuildMaps.txt",
   ages = NULL,
   max_age = NULL,
+  offset = 0,
   verbose = TRUE
 )
 }
 \arguments{
 \item{maps}{A \code{geo_paleomaps} object from \code{get_paleomaps()}
-or \code{load_raster_maps()}. Used to determine the set of
-available ages.}
+or \code{load_raster_maps()}, optionally with node maps
+from \code{restrict_node_map()}. Used to determine the
+set of available ages.}
 
 \item{bin_file}{Character. Name of the binary map file that BayesTraits
 will create (default \code{"BinaryMap.bin"}).}
@@ -42,6 +44,9 @@ covered, e.g. the root age of the tree. When set, the
 last map covers up to \code{ceiling(max_age) + 0.5} Ma.
 Must not be younger than the oldest map. \code{NULL}
 (default) keeps the last map's end at its age + 0.5 Ma.}
+
+\item{offset}{Numeric (Ma). Age of the youngest tip; default 0 (an
+extant tip). See the Offset section.}
 
 \item{verbose}{Logical. Print a summary on completion (default TRUE).}
 }
@@ -73,10 +78,31 @@ root, and in particular for a single present-day map used as a
 time-invariant restriction (\code{get_paleomaps(ages = 0)} or
 \code{load_raster_maps(file = )}).
 
+Node maps added with \code{restrict_node_map()} are inserted with their
+narrow intervals, and the series map covering that time is split around
+them (e.g. \code{mask_64.csv} from 63.5 to 63.9081, \code{mask_AFA_64.csv}
+from 63.9081 to 63.9101, \code{mask_64.csv} from 63.9101 to 64.5), so the
+intervals have no gaps or overlaps, as BayesTraits requires. Times are
+written with up to 6 decimals.
+}
+\section{Offset (all-extinct clades)}{
+
+BayesTraits measures node ages from the most recent tip ("Maps are
+attached to internal nodes based on their age, with extant taxa assigned
+the age of zero ... If you are working with a group of taxa which are all
+extinct, such as dinosaurs, you will have to apply an offset to compensate
+for this"; BayesTraits V5.0.2 manual, Maps section). If no tip is extant,
+set \code{offset} to the age (Ma) of the youngest tip. Every interval is
+then shifted by \code{-offset} into tree time, maps entirely younger than
+the youngest tip are left out, and the first remaining map starts at 0.
+\code{ages} and \code{max_age} stay in real ages (Ma). Use the same
+\code{offset} as in \code{restrict_node_map()}.
+
 The output file can be passed directly to BayesTraits with the
 \code{BuildMaps} command. After \code{BuildMaps} has run, load the resulting
 binary file in BayesTraits with \code{LoadMaps BinaryMap.bin}.
 }
+
 \examples{
 \dontrun{
 # Requires an internet connection (GPlates Web Service)
@@ -95,6 +121,11 @@ write_buildmaps_file(maps,
 present <- get_paleomaps(ages = 0)
 paleomap_to_csv(age = 0, maps = present, write = TRUE, dir = "maps_csv")
 write_buildmaps_file(present, max_age = 1.2)   # root age of the tree
+
+# All-extinct clade whose youngest tip is 66 Ma old
+dino <- get_paleomaps(ages = 66:230)
+paleomap_to_csv(age = dino$ages, maps = dino, dir = "maps_dino")
+write_buildmaps_file(dino, offset = 66, max_age = 230)
 
 # Then in BayesTraits (command line):
 # BuildMaps BuildPrimatesMaps.txt

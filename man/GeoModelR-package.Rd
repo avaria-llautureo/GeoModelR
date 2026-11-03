@@ -20,6 +20,7 @@ Main functions, by workflow:
 \code{\link{fetch_etopo2022}()},
 \code{\link{paleomap_to_csv}()},
 \code{\link{export_restriction_maps}()},
+\code{\link{restrict_node_map}()},
 \code{\link{write_buildmaps_file}()}.
 \item Output: \code{\link{read_geo_ancstates}()},
 \code{\link{add_ape_nodes}()}, \code{\link{plot_node}()},
