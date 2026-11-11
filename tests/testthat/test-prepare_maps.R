@@ -52,6 +52,43 @@ test_that("get_paleomaps() keeps a NULL slot for failed ages", {
   expect_false(is.null(maps2$coastlines[["1"]]))
 })
 
+test_that(".clean_coastlines() keeps polygons when some features are empty", {
+  p1 <- sf::st_polygon(list(rbind(c(0, 0), c(10, 0), c(10, 10), c(0, 10),
+                                  c(0, 0))))
+  p2 <- sf::st_polygon(list(rbind(c(20, 0), c(30, 0), c(30, 10), c(20, 10),
+                                  c(20, 0))))
+  gc <- sf::st_geometrycollection(list(p2, sf::st_linestring(
+    rbind(c(40, 0), c(50, 0)))))
+  raw <- sf::st_sf(id = 1:3, geometry = sf::st_sfc(
+    p1, gc, sf::st_geometrycollection(), crs = 4326))
+  cs <- expect_no_warning(.clean_coastlines(raw))
+  expect_equal(nrow(cs), 2)
+  expect_true(all(sf::st_geometry_type(cs) %in% c("POLYGON", "MULTIPOLYGON")))
+  expect_false(anyNA(sf::st_bbox(cs)))
+})
+
+test_that("get_paleomaps() treats an empty map as failed", {
+  sq <- fake_maps(0)$coastlines[[1]]
+  empty <- sf::st_sf(id = 1, geometry = sf::st_sfc(
+    sf::st_geometrycollection(), crs = 4326))
+  local_mocked_bindings(
+    reconstruct = function(x, age, model, ...) if (age == 2) empty else sq,
+    .package = "rgplates")
+  expect_warning(maps <- suppressMessages(get_paleomaps(ages = 1:3)),
+                 "1 age\\(s\\) failed: 2")
+  expect_null(maps$coastlines[["2"]])
+  expect_identical(maps$failed, 2L)
+  expect_equal(maps$n_ages, 2)
+})
+
+test_that("get_paleomaps() reports the real age range", {
+  sq <- fake_maps(0)$coastlines[[1]]
+  local_mocked_bindings(reconstruct = function(x, age, model, ...) sq,
+                        .package = "rgplates")
+  expect_message(get_paleomaps(ages = 1:3), "\\(1-3 Ma\\)")
+  expect_message(get_paleomaps(ages = 0), "\\(0 Ma\\)")
+})
+
 test_that("paleomap_to_csv() rasterises GPlates maps to a binary grid", {
   # fake_maps() has no 'type' field, like objects made before 0.3.1
   df <- paleomap_to_csv(age = 0, maps = fake_maps(0), resolution = 5,

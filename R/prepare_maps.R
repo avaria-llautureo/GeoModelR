@@ -32,8 +32,13 @@
 `%||%` <- function(a, b) if (is.null(a)) b else a
 
 # Repair GPlates coastline polygons and keep only polygon parts.
+# st_make_valid() can turn degenerate features into empty geometries. Those
+# are removed first: if any feature is empty, sf::st_collection_extract()
+# does not unpack geometry collections and drops every polygon, returning an
+# empty map (only a warning, no error).
 .clean_coastlines <- function(raw) {
   cs <- sf::st_make_valid(raw)
+  cs <- cs[!sf::st_is_empty(cs), ]
   if (any(sf::st_geometry_type(cs) == "GEOMETRYCOLLECTION")) {
     cs <- tryCatch(
       sf::st_collection_extract(cs, "POLYGON"),
@@ -255,8 +260,10 @@ get_paleomaps <- function(geo     = NULL,
 
   n <- length(ages)
   message(sprintf(
-    "[get_paleomaps] Downloading %d palaeomaps (0-%d Ma), model '%s'...",
-    n, max_age, model
+    "[get_paleomaps] Downloading %d palaeomaps (%s Ma), model '%s'...",
+    n,
+    if (n == 1) as.character(ages) else paste0(min(ages), "-", max(ages)),
+    model
   ))
   message("  This may take a few minutes. Maps are stored locally for reuse.")
 
@@ -273,7 +280,12 @@ get_paleomaps <- function(geo     = NULL,
     # coastlines[[i]] <- NULL would delete the element and shift later ages.
     coastlines[i] <- list(tryCatch({
       raw <- rgplates::reconstruct("coastlines", age = age, model = model)
-      .clean_coastlines(raw)
+      cs  <- .clean_coastlines(raw)
+      # An empty map would be stored as a success and fail later in
+      # plotting or rasterising, so treat it as a failed age.
+      if (nrow(cs) == 0)
+        stop("no coastline polygons after cleaning")
+      cs
     }, error = function(e) {
       message(sprintf("  WARNING: age %d Ma failed (%s) - skipping.",
                       age, conditionMessage(e)))

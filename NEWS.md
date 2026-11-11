@@ -19,6 +19,20 @@
   the youngest tip, for all-extinct clades (BayesTraits measures node ages
   from the most recent tip). Intervals are shifted into tree time.
 
+## Bug fixes
+
+* `get_paleomaps()` could return an empty map for some ages and plate models
+  (with the warning "x contains no geometries of specified type"). Repairing
+  the coastlines can leave some features empty, which made every polygon of
+  that age be dropped. Empty features are now removed first, so all polygons
+  are kept. This also applies where coastlines are downloaded in
+  `paleomap_to_csv()` and `fill_missing_maps()`, and to polygon maps in
+  `restrict_node_map()`.
+* `get_paleomaps()` now reports an age with no coastline polygons as failed
+  (in `$failed` and the warning) instead of storing an empty map.
+* `get_paleomaps()` start message shows the real age range (e.g. "1-10 Ma"
+  for `ages = 1:10`, not "0-10 Ma").
+
 # GeoModelR 0.3.1
 
 ## New features
